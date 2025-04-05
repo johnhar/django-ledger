@@ -17,6 +17,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class EntityModelCreateForm(ModelForm):
+    default_funds = BooleanField(required=False, initial=False, label=_('Populate Default Funds (if entity is a nonprofit)'))
+    activate_all_funds = BooleanField(required=False, initial=False, label=_('Activate All Funds (if entity is a nonprofit)'))
     default_coa = BooleanField(required=False, initial=False, label=_('Populate Default CoA'))
     activate_all_accounts = BooleanField(required=False, initial=False, label=_('Activate All Accounts'))
     generate_sample_data = BooleanField(required=False, initial=False, label=_('Fill With Sample Data?'))
@@ -30,15 +32,19 @@ class EntityModelCreateForm(ModelForm):
         return name
 
     def clean(self):
+        populate_funds = self.cleaned_data['default_funds']
+        activate_all_funds = self.cleaned_data['activate_all_funds']
         populate_coa = self.cleaned_data['default_coa']
         activate_all_accounts = self.cleaned_data['activate_all_accounts']
         sample_data = self.cleaned_data['generate_sample_data']
 
         if sample_data and not all([
+            populate_funds if self.is_nonprofit else True,
+            activate_all_funds if self.is_nonprofit else True,
             populate_coa,
-            activate_all_accounts
+            activate_all_accounts,
         ]):
-            raise ValidationError(f'Filling sample data requires using default CoA and activate all accounts.')
+            raise ValidationError(f'Filling sample data requires using default funds, default CoA and activate all funds and accounts.')
         validate_cszc(self.cleaned_data)
 
     class Meta:
@@ -55,8 +61,12 @@ class EntityModelCreateForm(ModelForm):
             'website',
             'phone',
             'fy_start_month',
+            'is_nonprofit',
+            'activate_all_funds',
+            'default_funds',
             'activate_all_accounts',
-            'accrual_method'
+            'default_coa',
+            'accrual_method',
         ]
         labels = {
             'name': _('Entity Name'),
@@ -104,6 +114,12 @@ class EntityModelCreateForm(ModelForm):
             'website': URLInput(attrs={
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES,
                 'placeholder': _('http://www.mywebsite.com...')
+            }),
+            'is_nonprofit': CheckboxInput(attrs={
+                'class': 'checkbox'
+            }),
+            'default_funds': CheckboxInput(attrs={
+                'class': 'checkbox'
             }),
             'default_coa': CheckboxInput(attrs={
                 'class': 'checkbox'

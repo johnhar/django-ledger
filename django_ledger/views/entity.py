@@ -65,7 +65,10 @@ class EntityModelCreateView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuery
 
     def form_valid(self, form):
         cleaned_data = form.cleaned_data
+        is_nonprofit = cleaned_data.get('is_nonprofit')
+        default_funds = cleaned_data.get('default_funds')
         default_coa = cleaned_data.get('default_coa')
+        activate_funds = cleaned_data.get('activate_all_funds')
         activate_accounts = cleaned_data.get('activate_all_accounts')
         sample_data = form.cleaned_data.get('generate_sample_data')
 
@@ -85,7 +88,8 @@ class EntityModelCreateView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuery
             phone=cleaned_data['phone'],
             fy_start_month=cleaned_data['fy_start_month'],
             accrual_method=cleaned_data['accrual_method'],
-            admin=user_model
+            admin=user_model,
+            is_nonprofit=cleaned_data['is_nonprofit'],
         )
         entity_model: EntityModel = EntityModel.add_root(instance=entity_model)
         default_coa_model = entity_model.create_chart_of_accounts(assign_as_default=True, commit=True)
@@ -93,6 +97,9 @@ class EntityModelCreateView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuery
         if default_coa:
             entity_model.populate_default_coa(activate_accounts=activate_accounts,
                                               coa_model=default_coa_model)
+
+        if is_nonprofit and default_funds:
+            entity_model.populate_default_funds(activate_funds=activate_funds)
 
         if sample_data:
             entity_generator = EntityDataGenerator(
