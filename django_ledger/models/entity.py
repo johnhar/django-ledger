@@ -1161,7 +1161,10 @@ class EntityModelAbstract(MP_Node,
             return coa_model_qs.active()
         return coa_model_qs
 
-    # Fund
+    # Nonprofit methods
+    def is_fund_enabled(self):
+        return self.is_nonprofit
+
     def populate_default_funds(self, activate_funds: bool = False):
         raise NotImplementedError('Not yet implemented')
 
