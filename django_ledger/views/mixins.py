@@ -391,6 +391,29 @@ class EntityUnitMixIn:
         context['by_unit'] = by_unit
         return context
 
+class FundMixIn:
+    FUND_SLUG_KWARG = 'fund_slug'
+    FUND_SLUG_QUERY_PARAM = 'fund'
+
+    def get_fund_slug(self):
+        fund_slug = self.kwargs.get(self.FUND_SLUG_KWARG)
+        if not fund_slug:
+            fund_slug = self.request.GET.get(self.FUND_SLUG_QUERY_PARAM)
+        return fund_slug
+
+    def get_context_data(self, **kwargs):
+        context = super(FundMixIn, self).get_context_data(**kwargs)
+        fund_slug = self.get_fund_slug()
+        context['fund_slug'] = fund_slug
+
+        by_fund = any([
+            True if fund_slug else False,
+            self.request.GET.get('by_fund') is not None
+        ])
+
+        context['by_fund'] = by_fund
+        return context
+
 
 class DigestContextMixIn:
     IO_DIGEST_UNBOUNDED = False
@@ -526,6 +549,7 @@ class BaseDateNavigationUrlMixIn:
     BASE_DATE_URL_KWARGS = (
         'entity_slug',
         'unit_slug',
+        'fund_slug',
         'ledger_pk',
         'account_pk',
         'coa_slug'
