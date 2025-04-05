@@ -100,8 +100,9 @@ def balance_sheet_statement(context, io_model, to_date=None):
         user_model=user_model,
         equity_only=False,
         entity_slug=entity_slug,
-        unit_slug=context['unit_slug'],
-        by_unit=context['by_unit'],
+        unit_slug=context.get('unit_slug', None),
+        # fund_slug=context.get('fund_slug', None),
+        by_unit=context.get('by_unit', None),
         to_date=to_date,
         signs=True,
         process_groups=True,
@@ -671,6 +672,11 @@ def navigation_menu(context, style):
                 'type': 'links',
                 'title': 'Your Lists',
                 'links': [
+                    {
+                        'type': 'link',
+                        'title': 'Funds',
+                        'url': reverse('django_ledger:fund-list', kwargs={'entity_slug': ENTITY_SLUG})
+                    },
                     {
                         'type': 'link',
                         'title': 'Entity Units',

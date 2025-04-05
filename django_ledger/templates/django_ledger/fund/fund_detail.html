@@ -1,0 +1,38 @@
+{% extends 'django_ledger/layouts/content_layout_1.html' %}
+{% load i18n %}
+{% load static %}
+{% load django_ledger %}
+
+{% block view_content %}
+    <div class="card">
+        <div class="card-content">
+            <div class="level">
+                <div class="level-left">
+                    <div class="level-item">
+                        <h1 class="is-size-1 has-text-weight-thin">{{ fund.name }}</h1></div>
+                </div>
+            </div>
+
+            <div class="columns is-multiline">
+
+                <div class="column is-12">
+                    <p class="is-size-3">{% trans 'Transaction Document Prefix' %}: {{ fund.document_prefix }}</p>
+                </div>
+                <div class="column is-12">
+                    <a href="{% url 'django_ledger:fund-dashboard' entity_slug=view.kwargs.entity_slug fund_slug=view.kwargs.fund_slug %}"
+                       class="button is-medium is-info">{% trans 'Dashboard' %}</a>
+                    <a href="{% url 'django_ledger:fund-bs' entity_slug=view.kwargs.entity_slug fund_slug=view.kwargs.fund_slug %}"
+                       class="button is-medium is-primary">{% trans 'Balance Sheet' %}</a>
+                    <a href="{% url 'django_ledger:fund-ic' entity_slug=view.kwargs.entity_slug fund_slug=view.kwargs.fund_slug %}"
+                       class="button is-medium is-primary">{% trans 'Income Statement' %}</a>
+                    <a href="{% url 'django_ledger:fund-cf' entity_slug=view.kwargs.entity_slug fund_slug=view.kwargs.fund_slug %}"
+                       class="button is-medium is-primary">{% trans 'Cash Flow Statement' %}</a>
+                </div>
+
+            </div>
+
+
+        </div>
+    </div>
+{% endblock %}
+

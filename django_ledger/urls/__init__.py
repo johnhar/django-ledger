@@ -17,6 +17,7 @@ urlpatterns = [
 
     path('entity/', include('django_ledger.urls.entity')),
     path('unit/', include('django_ledger.urls.unit')),
+    path('fund/', include('django_ledger.urls.fund')),
     path('financial-statement/', include('django_ledger.urls.financial_statement')),
     path('chart-of-accounts/', include('django_ledger.urls.chart_of_accounts')),
     path('account/', include('django_ledger.urls.account')),
