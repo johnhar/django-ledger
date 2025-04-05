@@ -157,6 +157,11 @@ CACHES = {
 #     }
 # }
 
+
+# Add the custom setting
+DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES = os.getenv('DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES', 'False').lower() == 'true'
+
+
 # django-debug-toolbar needs to know on which IPs we should be showing the toolbar
 INTERNAL_IPS = ('127.0.0.1',)
 # # nuclear option to force toolbar to show always

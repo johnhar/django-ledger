@@ -5,7 +5,7 @@ Copyright© EDMA Group Inc licensed under the GPLv3 Agreement.
 Contributions to this module:
 Miguel Sanda <msanda@arrobalytics.com>
 """
-
+from django.conf import settings
 from django.forms import (ModelForm, TextInput, BooleanField, ValidationError, IntegerField,
                           EmailInput, URLInput, CheckboxInput, Select, Form)
 from django.utils.translation import gettext_lazy as _
@@ -32,15 +32,16 @@ class EntityModelCreateForm(ModelForm):
         return name
 
     def clean(self):
-        populate_funds = self.cleaned_data['default_funds']
-        activate_all_funds = self.cleaned_data['activate_all_funds']
+        is_nonprofit = self.cleaned_data.get('is_nonprofit', False)
+        populate_funds = self.cleaned_data.get('default_funds', False)
+        activate_all_funds = self.cleaned_data.get('activate_all_funds', False)
         populate_coa = self.cleaned_data['default_coa']
         activate_all_accounts = self.cleaned_data['activate_all_accounts']
         sample_data = self.cleaned_data['generate_sample_data']
 
         if sample_data and not all([
-            populate_funds if self.is_nonprofit else True,
-            activate_all_funds if self.is_nonprofit else True,
+            populate_funds if is_nonprofit else True,
+            activate_all_funds if is_nonprofit else True,
             populate_coa,
             activate_all_accounts,
         ]):
@@ -131,6 +132,17 @@ class EntityModelCreateForm(ModelForm):
                 'class': 'checkbook'
             })
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Dynamically exclude fields based on settings
+        if not getattr(settings, 'DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES', False):
+            # Remove nonprofit-related fields if setting is not enabled
+            self.fields.pop('is_nonprofit', None)
+            self.fields.pop('default_funds', None)
+            self.fields.pop('activate_all_funds', None)
+
 
 
 class EntityModelUpdateForm(ModelForm):
