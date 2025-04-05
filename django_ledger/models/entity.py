@@ -780,6 +780,7 @@ class EntityModelAbstract(MP_Node,
                                       verbose_name=_('Managers'))
 
     hidden = models.BooleanField(default=False)
+    is_nonprofit = models.BooleanField(default=False, verbose_name=_('Is a Non-Profit'))
     accrual_method = models.BooleanField(default=False, verbose_name=_('Use Accrual Method'))
     fy_start_month = models.IntegerField(choices=FY_MONTHS, default=1, verbose_name=_('Fiscal Year Start'))
     last_closing_date = models.DateField(null=True, blank=True, verbose_name=_('Last Closing Entry Date'))
@@ -820,6 +821,7 @@ class EntityModelAbstract(MP_Node,
     @classmethod
     def create_entity(cls,
                       name: str,
+                      is_nonprofit: bool,
                       use_accrual_method: bool,
                       admin: UserModel,
                       fy_start_month: int,
@@ -832,6 +834,8 @@ class EntityModelAbstract(MP_Node,
         ----------
         name: str
             The name of the new Entity.
+        is_nonprofit: bool
+            If True, the new Entity will be configured as a non-profit entity, enabling features such as Fund Accounting.
         use_accrual_method: bool
             If True, accrual method of accounting will be used, otherwise Cash Method of accounting will be used.
         fy_start_month: int
@@ -848,6 +852,7 @@ class EntityModelAbstract(MP_Node,
         """
         entity_model = cls(
             name=name,
+            is_nonprofit=is_nonprofit,
             accrual_method=use_accrual_method,
             fy_start_month=fy_start_month,
             admin=admin
@@ -1155,6 +1160,10 @@ class EntityModelAbstract(MP_Node,
         if active:
             return coa_model_qs.active()
         return coa_model_qs
+
+    # Fund
+    def populate_default_funds(self, activate_funds: bool = False):
+        raise NotImplementedError('Not yet implemented')
 
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
