@@ -66,7 +66,6 @@ class EntityModelCreateForm(ModelForm):
             'activate_all_funds',
             'default_funds',
             'activate_all_accounts',
-            'default_coa',
             'accrual_method',
         ]
         labels = {
