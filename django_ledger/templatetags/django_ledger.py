@@ -244,6 +244,7 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
             'Cannot handle object of type {} to get transaction model queryset'.format(type(object_type))
         )
 
+    is_fund_enabled = object_type.entity_model.is_fund_enabled()
     total_credits = sum(tx.amount for tx in transaction_model_qs if tx.is_credit())
     total_debits = sum(tx.amount for tx in transaction_model_qs if tx.is_debit())
 
@@ -252,7 +253,8 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
         'transaction_model_qs': transaction_model_qs,
         'total_debits': total_debits,
         'total_credits': total_credits,
-        'object': object_type
+        'object': object_type,
+        'is_fund_enabled': is_fund_enabled,
     }
 
 

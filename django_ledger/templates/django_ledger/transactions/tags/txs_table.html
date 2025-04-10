@@ -6,6 +6,9 @@
         <table class="table is-fullwidth is-narrow is-striped is-bordered django-ledger-table-bottom-margin-75">
             <tr>
                 <th>{% trans 'Timestamp' %}</th>
+                {% if is_fund_enabled %}
+                  <th>{% trans 'Fund' %}</th>
+                {% endif %}
                 <th>{% trans 'Account' %}</th>
                 <th>{% trans 'Account Name' %}</th>
                 <th>{% trans 'Unit' %}</th>
@@ -16,6 +19,9 @@
             {% for transaction_model in transaction_model_qs %}
                 <tr>
                     <td>{{ transaction_model.timestamp }}</td>
+                    {% if is_fund_enabled %}
+                      <td>{{ transaction_model.fund.name }}</td>
+                    {% endif %}
                     <td>{{ transaction_model.account_code }}</td>
                     <td>{{ transaction_model.account_name }}</td>
                     <td>{% if transaction_model.entity_unit_name %}
@@ -28,6 +34,9 @@
                 </tr>
             {% endfor %}
             <tr class="has-text-weight-bold">
+                {% if is_fund_enabled %}
+                  <td></td>
+                {% endif %}
                 <td></td>
                 <td></td>
                 <td></td>
@@ -42,6 +51,9 @@
     <div class="table-container">
         <table class="table is-fullwidth is-narrow is-striped is-bordered django-ledger-table-bottom-margin-75">
             <tr>
+                {% if is_fund_enabled %}
+                  <th>{% trans 'Fund' %}</th>
+                {% endif %}
                 <th>{% trans 'Account' %}</th>
                 <th>{% trans 'Account Name' %}</th>
                 <th>{% trans 'Credit' %}</th>
@@ -50,6 +62,9 @@
             </tr>
             {% for transaction_model in transaction_model_qs %}
                 <tr>
+                    {% if is_fund_enabled %}
+                      <td>{{ transaction_model.fund.name }}</td>
+                    {% endif %}
                     <td>{{ transaction_model.account_code }}</td>
                     <td>{{ transaction_model.account_name }}</td>
                     <td>{% if transaction_model.is_credit %}${{ transaction_model.amount | currency_format }}{% endif %}</td>
@@ -58,6 +73,9 @@
                 </tr>
             {% endfor %}
             <tr class="has-text-weight-bold">
+                {% if is_fund_enabled %}
+                  <td></td>
+                {% endif %}
                 <td></td>
                 <td class="has-text-right">{% trans 'Total' %}</td>
                 <td>{% currency_symbol %}{{ total_credits | currency_format }}</td>
