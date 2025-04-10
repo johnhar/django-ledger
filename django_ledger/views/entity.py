@@ -21,7 +21,7 @@ from django_ledger.io.io_generator import EntityDataGenerator
 from django_ledger.models import (
     EntityModel,
     ItemTransactionModel,
-    TransactionModel
+    TransactionModel, FundModel
 )
 from django_ledger.views.mixins import (
     QuarterlyReportMixIn, YearlyReportMixIn,
@@ -99,7 +99,11 @@ class EntityModelCreateView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuery
                                               coa_model=default_coa_model)
 
         if is_nonprofit and default_funds:
-            entity_model.populate_default_funds(activate_funds=activate_funds)
+            funds = FundModel.create_default_funds(entity=entity_model, activate=activate_funds)
+        else:
+            funds = None
+
+        # TODO: use these funds in the data generator
 
         if sample_data:
             entity_generator = EntityDataGenerator(

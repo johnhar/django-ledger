@@ -1165,9 +1165,6 @@ class EntityModelAbstract(MP_Node,
     def is_fund_enabled(self):
         return self.is_nonprofit
 
-    def populate_default_funds(self, activate_funds: bool = False):
-        raise NotImplementedError('Not yet implemented')
-
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
                                               coa_model: ChartOfAccountModel,

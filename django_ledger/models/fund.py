@@ -21,7 +21,7 @@ By creating Funds similar to Entity Units, we retain certain benefits:
 
 from random import choices
 from string import ascii_lowercase, digits, ascii_uppercase
-from typing import Optional
+from typing import Optional, Self
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
@@ -244,3 +244,25 @@ class FundModel(FundModelAbstract):
 
     class Meta(FundModelAbstract.Meta):
         abstract = False
+
+    @classmethod
+    def create_default_funds(cls, entity, activate: bool = False) -> list[Self]:
+        DEFAULT_FUNDS = [
+            ('General Operations', 'GO'),
+            ('School', 'SC'),
+            ('Building', 'BL'),
+        ]
+
+        fund_list = []
+        for name, prefix in DEFAULT_FUNDS:
+            fund = FundModel(
+                name=name,
+                document_prefix=prefix,
+                entity=entity,
+                active=activate,
+            )
+            fund.create_fund_slug(name=name)
+            FundModel.add_root(instance=fund)
+            fund_list.append(fund)
+
+        return fund_list
