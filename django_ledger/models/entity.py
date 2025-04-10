@@ -42,6 +42,7 @@ from treebeard.mp_tree import MP_Node, MP_NodeManager, MP_NodeQuerySet
 
 from django_ledger.io import roles as roles_module, validate_roles, IODigestContextManager
 from django_ledger.io.io_core import IOMixIn, get_localtime, get_localdate
+from django_ledger.models.fund import FundModel
 from django_ledger.models.accounts import AccountModel, AccountModelQuerySet, DEBIT, CREDIT
 from django_ledger.models.bank_account import BankAccountModelQuerySet, BankAccountModel
 from django_ledger.models.chart_of_accounts import ChartOfAccountModel, ChartOfAccountModelQuerySet
@@ -188,6 +189,11 @@ class EntityModelFiscalPeriodMixIn:
                 entity = obj.entity
             elif isinstance(obj, AccountModel):
                 entity = obj.coa_model.entity
+            elif isinstance(obj, FundModel):
+                entity = obj.entity
+            else:
+                raise TypeError(f'object must be an instance of EntityModel, LedgerModel, EntityUnitModel, '
+                                f'AccountModel or FundModel, got {type(obj)} instead of {type(EntityModel)}')
 
             fy: int = getattr(entity, 'fy_start_month')
 

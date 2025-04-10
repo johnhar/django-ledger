@@ -540,6 +540,18 @@ class IODatabaseMixIn:
         """
         return isinstance(self, lazy_loader.get_entity_model())
 
+    def is_fund_model(self):
+        """
+        Checks if the current instance is a FundModel.
+
+        Returns
+        -------
+        bool
+            `True` if the object is an instance of the fund model;
+            `False` otherwise.
+        """
+        return isinstance(self, lazy_loader.get_fund_model())
+
     def is_ledger_model(self):
         """
         Checks if the current instance is a LedgerModel.
@@ -626,6 +638,7 @@ class IODatabaseMixIn:
     def database_digest(self,
                         entity_slug: Optional[str] = None,
                         unit_slug: Optional[str] = None,
+                        fund_slug: Optional[str] = None,
                         user_model: Optional[UserModel] = None,
                         from_date: Optional[Union[date, datetime]] = None,
                         to_date: Optional[Union[date, datetime]] = None,
@@ -723,6 +736,13 @@ class IODatabaseMixIn:
                     entity_slug=entity_slug or self.slug
                 ).for_unit(unit_slug=unit_slug)
 
+            elif fund_slug:
+
+                txs_queryset_init = TransactionModel.objects.for_entity(
+                    user_model=user_model,
+                    entity_slug=entity_slug or self.slug
+                ).for_fund(fund_slug=fund_slug)
+
             else:
                 txs_queryset_init = TransactionModel.objects.for_entity(
                     user_model=user_model,
@@ -737,6 +757,16 @@ class IODatabaseMixIn:
                 user_model=user_model,
                 entity_slug=entity_slug,
             ).for_unit(unit_slug=unit_slug or self)
+
+        elif self.is_fund_model():
+            if not entity_slug:
+                raise IOValidationError(
+                    'Calling digest from Fund Model requires entity_slug explicitly for safety')
+
+            txs_queryset_init = TransactionModel.objects.for_entity(
+                user_model=user_model,
+                entity_slug=entity_slug,
+            ).for_fund(fund_slug=fund_slug or self)
 
         elif self.is_ledger_model():
             if not entity_slug:
@@ -918,6 +948,7 @@ class IODatabaseMixIn:
                       user_model: Optional[UserModel] = None,
                       entity_slug: Optional[str] = None,
                       unit_slug: Optional[str] = None,
+                      fund_slug: Optional[str] = None,
                       to_date: Optional[Union[date, datetime, str]] = None,
                       from_date: Optional[Union[date, datetime, str]] = None,
                       equity_only: bool = False,
@@ -991,6 +1022,7 @@ class IODatabaseMixIn:
             user_model=user_model,
             entity_slug=entity_slug,
             unit_slug=unit_slug,
+            fund_slug=fund_slug,
             to_date=to_date,
             from_date=from_date,
             by_unit=by_unit,
@@ -1106,6 +1138,7 @@ class IODatabaseMixIn:
     def digest(self,
                entity_slug: Optional[str] = None,
                unit_slug: Optional[str] = None,
+               fund_slug: Optional[str] = None,
                to_date: Optional[Union[date, datetime, str]] = None,
                from_date: Optional[Union[date, datetime, str]] = None,
                user_model: Optional[UserModel] = None,
@@ -1210,6 +1243,7 @@ class IODatabaseMixIn:
         io_state['to_date'] = to_date
         io_state['by_unit'] = by_unit
         io_state['unit_slug'] = unit_slug
+        io_state['fund_slug'] = fund_slug
         io_state['entity_slug'] = entity_slug
         io_state['by_period'] = by_period
         io_state['by_activity'] = by_activity
@@ -1222,6 +1256,7 @@ class IODatabaseMixIn:
             activity=activity,
             entity_slug=entity_slug,
             unit_slug=unit_slug,
+            fund_slug=fund_slug,
             to_date=to_date,
             from_date=from_date,
             signs=signs,

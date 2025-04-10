@@ -30,7 +30,7 @@ from django.db.models.signals import pre_save
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io.io_core import validate_io_timestamp
-from django_ledger.models import AccountModel, BillModel, EntityModel, InvoiceModel, LedgerModel
+from django_ledger.models import AccountModel, BillModel, EntityModel, InvoiceModel, LedgerModel, FundModel
 from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.unit import EntityUnitModel
 from django_ledger.models.utils import lazy_loader
@@ -132,6 +132,24 @@ class TransactionModelQuerySet(QuerySet):
         if isinstance(unit_slug, EntityUnitModel):
             return self.filter(journal_entry__entity_unit=unit_slug)
         return self.filter(journal_entry__entity_unit__slug__exact=unit_slug)
+
+    def for_fund(self, fund_slug: Union[str, FundModel]):
+        """
+        Filters transactions based on their associated entity unit.
+
+        Parameters
+        ----------
+        fund_slug : str or FundModel
+            A string representing the slug of the fund or an `FundModel` instance.
+
+        Returns
+        -------
+        TransactionModelQuerySet
+            A QuerySet filtered for transactions linked to the specified fund.
+        """
+        if isinstance(fund_slug, FundModel):
+            return self.filter(fund=fund_slug)
+        return self.filter(fund__slug__exact=fund_slug)
 
     def for_activity(self, activity_list: Union[str, List[str], Set[str]]):
         """
@@ -464,6 +482,13 @@ class TransactionModelAbstract(CreateUpdateMixIn):
         help_text=_('Account from Chart of Accounts to be associated with this transaction.'),
         on_delete=models.PROTECT
     )
+    fund = models.ForeignKey(
+        'django_ledger.FundModel',
+        verbose_name=_('Fund'),
+        help_text=_('Fund to be associated with this transaction.'),
+        null=True,
+        on_delete=models.PROTECT
+    )
     amount = models.DecimalField(
         decimal_places=2,
         max_digits=20,
@@ -491,6 +516,7 @@ class TransactionModelAbstract(CreateUpdateMixIn):
         indexes = [
             models.Index(fields=['tx_type']),
             models.Index(fields=['account']),
+            models.Index(fields=['fund']),
             models.Index(fields=['journal_entry']),
             models.Index(fields=['created']),
             models.Index(fields=['updated']),
@@ -499,12 +525,13 @@ class TransactionModelAbstract(CreateUpdateMixIn):
         ]
 
     def __str__(self):
-        return '{code}-{name}/{balance_type}: {amount}/{tx_type}'.format(
+        return '{code}-{name}/{balance_type}: {amount}/{tx_type}/{fund}'.format(
             code=self.account.code,
             name=self.account.name,
             balance_type=self.account.balance_type,
             amount=self.amount,
-            tx_type=self.tx_type
+            tx_type=self.tx_type,
+            fund=self.fund.name if self.fund else None,
         )
 
     @property
