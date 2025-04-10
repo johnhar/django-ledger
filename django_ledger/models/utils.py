@@ -80,6 +80,7 @@ class LazyLoader:
 
     ENTITY_STATE_MODEL = 'entitystatemodel'
     ENTITY_UNIT_MODEL = 'entityunitmodel'
+    FUND_MODEL = 'fundmodel'
     CLOSING_ENTRY_MODEL = 'closingentrymodel'
     CLOSING_ENTRY_TRANSACTION_MODEL = 'closingentrytransactionmodel'
 
@@ -110,6 +111,9 @@ class LazyLoader:
 
     def get_entity_state_model(self):
         return self.app_config.get_model(self.ENTITY_STATE_MODEL)
+
+    def get_fund_model(self):
+        return self.app_config.get_model(self.FUND_MODEL)
 
     def get_bank_account_model(self):
         return self.app_config.get_model(self.BANK_ACCOUNT_MODEL)

@@ -56,6 +56,23 @@ urlpatterns = [
          views.DateEntityUnitModelBalanceSheetView.as_view(),
          name='unit-bs-date'),
 
+    # Funds...
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/balance-sheet/',
+         views.BaseFundModelBalanceSheetView.as_view(),
+         name='fund-bs'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/balance-sheet/year/<int:year>/',
+         views.FiscalYearFundModelBalanceSheetView.as_view(),
+         name='fund-bs-year'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/balance-sheet/quarter/<int:year>/<int:quarter>/',
+         views.QuarterlyFundModelBalanceSheetView.as_view(),
+         name='fund-bs-quarter'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/balance-sheet/month/<int:year>/<int:month>/',
+         views.MonthlyFundModelBalanceSheetView.as_view(),
+         name='fund-bs-month'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/balance-sheet/date/<int:year>/<int:month>/<int:day>/',
+         views.DateFundModelBalanceSheetView.as_view(),
+         name='fund-bs-date'),
+
     # INCOME STATEMENT Reports ----
     # Entity .....
     path('entity/<slug:entity_slug>/income-statement/',
@@ -107,6 +124,23 @@ urlpatterns = [
     path('unit/<slug:entity_slug>/<slug:unit_slug>/income-statement/date/<int:year>/<str:month>/<int:day>/',
          views.MonthlyIncomeStatementView.as_view(),
          name='unit-ic-date'),
+
+    # Funds...
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/income-statement/',
+         views.BaseFundModelIncomeStatementView.as_view(),
+         name='fund-ic'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/income-statement/year/<int:year>/',
+         views.FiscalYearFundModelIncomeStatementView.as_view(),
+         name='fund-ic-year'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/income-statement/quarter/<int:year>/<int:quarter>/',
+         views.QuarterlyIncomeStatementView.as_view(),
+         name='fund-ic-quarter'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/income-statement/month/<int:year>/<str:month>/',
+         views.MonthlyIncomeStatementView.as_view(),
+         name='fund-ic-month'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/income-statement/date/<int:year>/<str:month>/<int:day>/',
+         views.MonthlyIncomeStatementView.as_view(),
+         name='fund-ic-date'),
 
     # CASH FLOW STATEMENTS...
     # Entities...
@@ -160,4 +194,20 @@ urlpatterns = [
          views.DateEntityUnitModelCashFlowStatementView.as_view(),
          name='unit-cf-date'),
 
+    # Funds...
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/cash-flow-statement/',
+         views.BaseFundModelCashFlowStatementView.as_view(),
+         name='fund-cf'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/cash-flow-statement/year/<int:year>/',
+         views.FiscalYearFundModelCashFlowStatementView.as_view(),
+         name='fund-cf-year'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/cash-flow-statement/quarter/<int:year>/<int:quarter>/',
+         views.QuarterlyFundModelCashFlowStatementView.as_view(),
+         name='fund-cf-quarter'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/cash-flow-statement/month/<int:year>/<str:month>/',
+         views.MonthlyFundModelCashFlowStatementView.as_view(),
+         name='fund-cf-month'),
+    path('fund/<slug:entity_slug>/<slug:fund_slug>/cash-flow-statement/date/<int:year>/<str:month>/<int:day>/',
+         views.DateFundModelCashFlowStatementView.as_view(),
+         name='fund-cf-date'),
 ]
