@@ -47,6 +47,16 @@ class FundModelQuerySet(MP_NodeQuerySet):
     """
     A custom defined FundModel Queryset.
     """
+    def active(self):
+        """
+        Filters the queryset to include only active items.
+
+        Returns
+        -------
+        AccountModelQuerySet
+            A filtered queryset containing only the items marked as active.
+        """
+        return self.filter(active=True)
 
 
 class FundModelManager(MP_NodeManager):
