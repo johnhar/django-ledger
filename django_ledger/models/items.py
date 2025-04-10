@@ -1048,6 +1048,11 @@ class ItemTransactionModelAbstract(CreateUpdateMixIn):
                                     blank=True,
                                     null=True,
                                     verbose_name=_('Associated Entity Unit'))
+    fund = models.ForeignKey('django_ledger.FundModel',
+                                    on_delete=models.RESTRICT,
+                                    blank=True,
+                                    null=True,
+                                    verbose_name=_('Associated Fund'))
     item_model = models.ForeignKey('django_ledger.ItemModel',
                                    on_delete=models.RESTRICT,
                                    verbose_name=_('Item Model'))

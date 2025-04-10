@@ -33,7 +33,8 @@ from django_ledger.io.roles import (INCOME_OPERATIONAL, ASSET_CA_INVENTORY, COGS
 from django_ledger.models import (EntityModel, TransactionModel, VendorModel, CustomerModel,
                                   EntityUnitModel, BankAccountModel, UnitOfMeasureModel, ItemModel,
                                   BillModel, ItemTransactionModel, InvoiceModel,
-                                  EstimateModel, LoggingMixIn, InvoiceModelValidationError, ChartOfAccountModel)
+                                  EstimateModel, LoggingMixIn, InvoiceModelValidationError, ChartOfAccountModel,
+                                  FundModel)
 from django_ledger.utils import (generate_random_sku, generate_random_upc, generate_random_item_id)
 
 try:
@@ -479,7 +480,8 @@ class EntityDataGenerator(LoggingMixIn):
                 ce_quantity=round(random() * randint(5, 15), 2),
                 ce_unit_cost_estimate=round(random() * randint(50, 100), 2),
                 ce_unit_revenue_estimate=round(random() * randint(80, 120) * (1 + 0.2 * random()), 2),
-                entity_unit=choice(self.entity_unit_models) if random() > .75 else None
+                entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
+                fund=choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)),
             ) for _ in range(randint(1, 10))
         ]
 
