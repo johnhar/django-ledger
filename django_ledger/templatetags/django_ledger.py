@@ -11,6 +11,7 @@ from random import randint
 from typing import Union
 
 from django import template
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.urls import reverse
@@ -21,7 +22,7 @@ from django_ledger.forms.app_filters import EntityFilterForm, ActivityFilterForm
 from django_ledger.forms.feedback import BugReportForm, RequestNewFeatureForm
 from django_ledger.io import ROLES_ORDER_ALL
 from django_ledger.io.io_core import validate_activity, get_localdate
-from django_ledger.models import BillModel, InvoiceModel, JournalEntryModel
+from django_ledger.models import BillModel, InvoiceModel, JournalEntryModel, EntityModel
 from django_ledger.settings import (
     DJANGO_LEDGER_FINANCIAL_ANALYSIS, DJANGO_LEDGER_CURRENCY_SYMBOL,
     DJANGO_LEDGER_SPACED_CURRENCY_SYMBOL)
@@ -678,11 +679,6 @@ def navigation_menu(context, style):
                 'links': [
                     {
                         'type': 'link',
-                        'title': 'Funds',
-                        'url': reverse('django_ledger:fund-list', kwargs={'entity_slug': ENTITY_SLUG})
-                    },
-                    {
-                        'type': 'link',
                         'title': 'Entity Units',
                         'url': reverse('django_ledger:unit-list', kwargs={'entity_slug': ENTITY_SLUG})
                     },
@@ -772,6 +768,20 @@ def navigation_menu(context, style):
                 ]
             }
         ]
+
+        # only add the 'Funds' section if fund accounting is enabled for this entity
+        if settings.DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            entity = EntityModel.objects.filter(slug=ENTITY_SLUG).first()
+            if entity and entity.is_nonprofit:
+                your_lists_section: dict = next(
+                    (section for section in nav_menu_links if section.get('title') == 'Your Lists'), None)
+                if your_lists_section:
+                    your_lists_section['links'].insert(0, {
+                        'type': 'link',
+                        'title': 'Funds',
+                        'url': reverse('django_ledger:fund-list', kwargs={'entity_slug': ENTITY_SLUG})
+                    })
+
         ctx['links'] = nav_menu_links
         ctx['request'] = context['request']
     return ctx
