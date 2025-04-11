@@ -92,6 +92,9 @@
                                     <thead>
                                     <tr>
                                         <th>{% trans 'Item' %}</th>
+                                        {% if bill.ledger.entity.is_fund_enabled %}
+                                          <th>{% trans 'Fund' %}</th>
+                                        {% endif %}
                                         <th>{% trans 'Entity Unit' %}</th>
                                         <th>{% trans 'Unit Cost' %}</th>
                                         <th>{% trans 'Quantity' %}</th>
@@ -104,6 +107,8 @@
                                     {% for bill_item in itemtxs_qs %}
                                         <tr>
                                             <td>{{ bill_item.item_model }}</td>
+                                            <td>{% if bill_item.fund %}
+                                                {{ bill_item.fund.name }}{% endif %}</td>
                                             <td>{% if bill_item.entity_unit %}
                                                 {{ bill_item.entity_unit }}{% endif %}</td>
                                             <td>{% currency_symbol %}{{ bill_item.unit_cost | currency_format }}</td>
