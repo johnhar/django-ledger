@@ -473,6 +473,9 @@ class EntityDataGenerator(LoggingMixIn):
         )
         self.logger.info(f'Creating entity estimate {estimate_model.estimate_number}...')
 
+        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
+            self.entity_model.is_fund_enabled() else None
+
         estimate_items = [
             ItemTransactionModel(
                 ce_model=estimate_model,
@@ -481,7 +484,7 @@ class EntityDataGenerator(LoggingMixIn):
                 ce_unit_cost_estimate=round(random() * randint(50, 100), 2),
                 ce_unit_revenue_estimate=round(random() * randint(80, 120) * (1 + 0.2 * random()), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund=choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)),
+                fund=fund,
             ) for _ in range(randint(1, 10))
         ]
 
@@ -524,6 +527,9 @@ class EntityDataGenerator(LoggingMixIn):
 
         self.logger.info(f'Creating entity bill {bill_model.bill_number}...')
 
+        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
+            self.entity_model.is_fund_enabled() else None
+
         bill_items = [
             ItemTransactionModel(
                 bill_model=bill_model,
@@ -531,7 +537,7 @@ class EntityDataGenerator(LoggingMixIn):
                 quantity=round(random() * randint(5, 15), 2),
                 unit_cost=round(random() * randint(50, 100), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund=choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)),
+                fund=fund,
             ) for _ in range(randint(1, 10))
         ]
 
@@ -577,6 +583,8 @@ class EntityDataGenerator(LoggingMixIn):
     def create_po(self, date_draft: date):
 
         po_model = self.entity_model.create_purchase_order(date_draft=date_draft)
+        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
+            self.entity_model.is_fund_enabled() else None
 
         po_items = [
             ItemTransactionModel(
@@ -585,8 +593,8 @@ class EntityDataGenerator(LoggingMixIn):
                 po_quantity=round(random() * randint(3, 10) + 3, 2),
                 po_unit_cost=round(random() * randint(100, 800), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)),
-        ) for _ in range(randint(1, 10))
+                fund=fund,
+            ) for _ in range(randint(1, 10))
         ]
 
         for poi in po_items:
@@ -706,6 +714,8 @@ class EntityDataGenerator(LoggingMixIn):
             item_model: ItemModel = choice(self.product_models)
             quantity = Decimal.from_float(round(random() * randint(1, 2), 2))
             entity_unit = choice(self.entity_unit_models) if random() > .75 else None
+            fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
+                self.entity_model.is_fund_enabled() else None
             margin = Decimal(random() + 3.5)
             avg_cost = item_model.get_average_cost()
             if item_model.is_product():
@@ -730,7 +740,8 @@ class EntityDataGenerator(LoggingMixIn):
                         item_model=item_model,
                         quantity=quantity,
                         unit_cost=unit_cost,
-                        entity_unit=entity_unit
+                        entity_unit=entity_unit,
+                        fund=fund,
                     )
                     itm.full_clean()
                     invoice_items.append(itm)

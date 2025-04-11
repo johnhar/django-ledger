@@ -236,15 +236,12 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
         transaction_model_qs = object_type.transactionmodel_set.all().with_annotated_details().order_by(
             '-timestamp')
         is_fund_enabled = object_type.entity_model.is_fund_enabled()
-        print(f'is_fund_enabled in entity: {is_fund_enabled}')
     elif isinstance(object_type, BillModel):
         transaction_model_qs = object_type.get_transaction_queryset(annotated=True).order_by('-timestamp')
         is_fund_enabled = object_type.ledger.entity.is_fund_enabled()
-        print(f'is_fund_enabled in ledger.entity: {is_fund_enabled}')
     elif isinstance(object_type, InvoiceModel):
         transaction_model_qs = object_type.get_transaction_queryset(annotated=True).order_by('-timestamp')
         is_fund_enabled = object_type.ledger.entity.is_fund_enabled()
-        print(f'is_fund_enabled in ledger.entity: {is_fund_enabled}')
     else:
         raise ValidationError(
             'Cannot handle object of type {} to get transaction model queryset'.format(type(object_type))
