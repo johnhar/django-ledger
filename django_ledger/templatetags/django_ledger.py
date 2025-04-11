@@ -891,7 +891,8 @@ def estimate_item_table(context, queryset):
         'entity_slug': context['view'].kwargs['entity_slug'],
         'ce_model': context['estimate_model'],
         'ce_item_list': queryset,
-        'is_fund_enabled': EntityModel.objects.filter(slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled(),
+        'is_fund_enabled': EntityModel.objects.filter(
+            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled(),
     }
 
 
@@ -900,7 +901,10 @@ def po_item_table(context, queryset):
     return {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'po_model': context['po_model'],
-        'po_item_list': queryset
+        'po_item_list': queryset,
+        'is_fund_enabled': EntityModel.objects.filter(
+            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled(),
+
     }
 
 

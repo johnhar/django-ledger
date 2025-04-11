@@ -584,8 +584,9 @@ class EntityDataGenerator(LoggingMixIn):
                 item_model=choice(self.product_models),
                 po_quantity=round(random() * randint(3, 10) + 3, 2),
                 po_unit_cost=round(random() * randint(100, 800), 2),
-                entity_unit=choice(self.entity_unit_models) if random() > .75 else None
-            ) for _ in range(randint(1, 10))
+                entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
+                fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)),
+        ) for _ in range(randint(1, 10))
         ]
 
         for poi in po_items:
