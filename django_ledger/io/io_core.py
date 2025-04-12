@@ -669,6 +669,9 @@ class IODatabaseMixIn:
         unit_slug : Optional[str]
             The identifier for the unit. Valid when filtering transactions for a
             specific unit within an entity.
+        fund_slug : Optional[str]
+            The identifier for the fund. Valid when filtering transactions for a
+            specific fund.
         user_model : Optional[UserModel]
             The user model instance. Represents the user context in which the
             transaction filtering applies.
@@ -977,6 +980,8 @@ class IODatabaseMixIn:
             to None.
         unit_slug : Optional[str]
             The slug representing the unit within the entity. Defaults to None.
+        fund_slug : Optional[str]
+            The slug representing the fund. Defaults to None.
         to_date : Optional[Union[date, datetime, str]]
             The end date for the transaction filter. Defaults to None.
         from_date : Optional[Union[date, datetime, str]]
@@ -1172,6 +1177,8 @@ class IODatabaseMixIn:
             The slug identifier for the entity to process the financial data for.
         unit_slug : Optional[str]
             The slug identifier for the specific unit of the entity to filter the data for.
+        fund_slug : Optional[str]
+            The slug identifier for the specific fund to filter the data for.
         to_date : Optional[Union[date, datetime, str]]
             The upper limit of the date range for which the data will be processed. Can be a `date`,
             `datetime`, or ISO 8601 formatted `str`.
