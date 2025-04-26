@@ -19,10 +19,13 @@ class AccountRoleIOMiddleware:
     def __init__(self,
                  io_data: dict,
                  by_period: bool = False,
-                 by_unit: bool = False):
+                 by_unit: bool = False,
+                 by_fund: bool = False,
+                 ):
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
+        self.BY_FUND = by_fund
 
         self.DIGEST = io_data
         self.DIGEST['role_account'] = None
@@ -40,9 +43,21 @@ class AccountRoleIOMiddleware:
         if self.BY_UNIT:
             self.ROLES_BALANCES_BY_UNIT = defaultdict(lambda: dict())
             self.DIGEST['role_balance_by_unit'] = None
+        if self.BY_FUND:
+            self.ROLES_BALANCES_BY_FUND = defaultdict(lambda: dict())
+            self.DIGEST['role_balance_by_fund'] = None
 
-        if self.BY_PERIOD and self.BY_UNIT:
-            self.ROLES_BALANCES_BY_PERIOD_AND_UNIT = defaultdict(lambda: dict())
+        # # These combinations of BY_* are not used in digest().  Comment out for now.
+        # if self.BY_PERIOD and self.BY_UNIT:
+        #     self.ROLES_BALANCES_BY_PERIOD_AND_UNIT = defaultdict(lambda: dict())
+        # if self.BY_PERIOD and self.BY_FUND:
+        #     self.ROLES_BALANCES_BY_PERIOD_AND_FUND = defaultdict(lambda: dict())
+        #
+        # if self.BY_UNIT and self.BY_FUND:
+        #     self.ROLES_BALANCES_BY_UNIT_AND_FUND = defaultdict(lambda: dict())
+        #
+        # if self.BY_PERIOD and self.BY_UNIT and self.BY_FUND:
+        #     self.ROLES_BALANCES_BY_PERIOD_AND_UNIT_AND_FUND = defaultdict(lambda: dict())
 
     def digest(self):
 
@@ -54,6 +69,8 @@ class AccountRoleIOMiddleware:
             self.DIGEST['role_balance_by_period'] = self.ROLES_BALANCES_BY_PERIOD
         if self.BY_UNIT:
             self.DIGEST['role_balance_by_unit'] = self.ROLES_BALANCES_BY_UNIT
+        if self.BY_FUND:
+            self.DIGEST['role_balance_by_fund'] = self.ROLES_BALANCES_BY_FUND
 
         return self.DIGEST
 
@@ -66,7 +83,7 @@ class AccountRoleIOMiddleware:
                 self.ROLES_ACCOUNTS[r] = acc_list
                 self.ROLES_BALANCES[r] = sum(acc['balance'] for acc in acc_list)
 
-                if self.BY_PERIOD or self.BY_UNIT:
+                if self.BY_PERIOD or self.BY_UNIT or self.BY_FUND:
                     for acc in acc_list:
                         if self.BY_PERIOD:
                             key = (acc['period_year'], acc['period_month'])
@@ -78,6 +95,10 @@ class AccountRoleIOMiddleware:
                             key = (acc['unit_uuid'], acc['unit_name'])
                             self.ROLES_BALANCES_BY_UNIT[key][r] = sum(
                                 acc['balance'] for acc in acc_list if acc['unit_uuid'] == key[0])
+                        if self.BY_FUND:
+                            key = (acc['fund_uuid'], acc['fund_name'])
+                            self.ROLES_BALANCES_BY_FUND[key][r] = sum(
+                                acc['balance'] for acc in acc_list if acc['fund_uuid'] == key[0])
 
 
 class AccountGroupIOMiddleware:
@@ -85,14 +106,18 @@ class AccountGroupIOMiddleware:
     GROUP_BALANCE_KEY = 'group_balance'
     GROUP_BALANCE_BY_UNIT_KEY = 'group_balance_by_unit'
     GROUP_BALANCE_BY_PERIOD_KEY = 'group_balance_by_period'
+    GROUP_BALANCE_BY_FUND_KEY = 'group_balance_by_fund'
 
     def __init__(self,
                  io_data: dict,
                  by_period: bool = False,
-                 by_unit: bool = False):
+                 by_unit: bool = False,
+                 by_fund: bool = False,
+                 ):
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
+        self.BY_FUND = by_fund
 
         self.IO_DIGEST = io_data
 
@@ -112,9 +137,26 @@ class AccountGroupIOMiddleware:
             self.GROUPS_BALANCES_BY_UNIT = defaultdict(lambda: dict())
             self.IO_DIGEST[self.GROUP_BALANCE_BY_UNIT_KEY] = None
 
-        if self.BY_PERIOD and self.BY_UNIT:
-            self.GROUPS_BALANCES_BY_PERIOD_AND_UNIT = defaultdict(lambda: dict())
-            self.IO_DIGEST[self.GROUP_BALANCE_BY_PERIOD_KEY] = None
+        if self.BY_FUND:
+            self.GROUPS_BALANCES_BY_FUND = defaultdict(lambda: dict())
+            self.IO_DIGEST[self.GROUP_BALANCE_BY_FUND_KEY] = None
+
+        # # These combinations of BY_* are defined but not used in digest(). Comment out for now.
+        # if self.BY_PERIOD and self.BY_UNIT:
+        #     self.GROUPS_BALANCES_BY_PERIOD_AND_UNIT = defaultdict(lambda: dict())
+        #     self.IO_DIGEST[self.GROUP_BALANCE_BY_PERIOD_KEY] = None
+        #
+        # if self.BY_PERIOD and self.BY_FUND:
+        #     self.GROUPS_BALANCES_BY_PERIOD_AND_FUND = defaultdict(lambda: dict())
+        #     self.IO_DIGEST[self.GROUP_BALANCE_BY_PERIOD_KEY] = None
+        #
+        # if self.BY_UNIT and self.BY_FUND:
+        #     self.GROUPS_BALANCES_BY_UNIT_AND_FUND = defaultdict(lambda: dict())
+        #     self.IO_DIGEST[self.GROUP_BALANCE_BY_UNIT_KEY] = None
+        #
+        # if self.BY_PERIOD and self.BY_UNIT and self.BY_FUND:
+        #     self.GROUPS_BALANCES_BY_PERIOD_AND_UNIT_AND_FUND = defaultdict(lambda: dict())
+        #     self.IO_DIGEST[self.GROUP_BALANCE_BY_PERIOD_KEY] = None
 
     def digest(self):
 
@@ -126,6 +168,9 @@ class AccountGroupIOMiddleware:
             self.IO_DIGEST[self.GROUP_BALANCE_BY_PERIOD_KEY] = self.GROUPS_BALANCES_BY_PERIOD
         if self.BY_UNIT:
             self.IO_DIGEST[self.GROUP_BALANCE_BY_UNIT_KEY] = self.GROUPS_BALANCES_BY_UNIT
+        if self.BY_FUND:
+            self.IO_DIGEST[self.GROUP_BALANCE_BY_FUND_KEY] = self.GROUPS_BALANCES_BY_FUND
+
         return self.IO_DIGEST
 
     def get_accounts_generator(self, mod, g):
@@ -137,7 +182,7 @@ class AccountGroupIOMiddleware:
             self.GROUPS_ACCOUNTS[g] = acc_list
             self.GROUPS_BALANCES[g] = sum(acc['balance'] for acc in acc_list)
 
-            if self.BY_PERIOD or self.BY_UNIT:
+            if self.BY_PERIOD or self.BY_UNIT or self.BY_FUND:
                 for acc in acc_list:
                     if self.BY_PERIOD:
                         key = (acc['period_year'], acc['period_month'])
@@ -151,13 +196,18 @@ class AccountGroupIOMiddleware:
                         self.GROUPS_BALANCES_BY_UNIT[key][g] = sum(
                             acc['balance'] for acc in acc_list if acc['unit_uuid'] == key[0]
                         )
+                    if self.BY_FUND:
+                        key = (acc['fund_uuid'], acc['fund_name'])
+                        self.GROUPS_BALANCES_BY_FUND[key][g] = sum(
+                            acc['balance'] for acc in acc_list if acc['fund_uuid'] == key[0]
+                        )
 
 
 class JEActivityIOMiddleware:
-
     def __init__(self,
                  io_data: dict,
                  by_unit: bool = False,
+                 by_fund: bool = False,
                  by_period: bool = False):
 
         self.DIGEST = io_data
@@ -166,6 +216,7 @@ class JEActivityIOMiddleware:
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
+        self.BY_FUND = by_fund
 
         self.ACCOUNTS = io_data['accounts']
         self.ACTIVITY_ACCOUNTS = dict()
@@ -177,8 +228,17 @@ class JEActivityIOMiddleware:
         if self.BY_UNIT:
             self.ACTIVITY_BALANCES_BY_UNIT = defaultdict(lambda: dict())
             self.DIGEST['activity_balance_by_unit'] = None
+        if self.BY_FUND:
+            self.ACTIVITY_BALANCES_BY_FUND = defaultdict(lambda: dict())
+            self.DIGEST['activity_balance_by_fund'] = None
         if self.BY_PERIOD and self.BY_UNIT:
             self.ROLES_BALANCES_BY_PERIOD_AND_UNIT = defaultdict(lambda: dict())
+        if self.BY_PERIOD and self.BY_FUND:
+            self.ROLES_BALANCES_BY_PERIOD_AND_FUND = defaultdict(lambda: dict())
+        if self.BY_UNIT and self.BY_FUND:
+            self.ROLES_BALANCES_BY_UNIT_AND_FUND = defaultdict(lambda: dict())
+        if self.BY_PERIOD and self.BY_UNIT and self.BY_FUND:
+            self.ROLES_BALANCES_BY_PERIOD_AND_UNIT_AND_FUND = defaultdict(lambda: dict())
 
     def digest(self):
 
@@ -190,6 +250,8 @@ class JEActivityIOMiddleware:
             self.DIGEST['activity_balance_by_period'] = self.ACTIVITY_BALANCES_BY_PERIOD
         if self.BY_UNIT:
             self.DIGEST['activity_balance_by_unit'] = self.ACTIVITY_BALANCES_BY_PERIOD
+        if self.BY_FUND:
+            self.DIGEST['activity_balance_by_fund'] = self.ACTIVITY_BALANCES_BY_PERIOD
 
     def get_accounts_generator(self, activity: str):
         return (acc for acc in self.ACCOUNTS if acc['activity'] == activity)
@@ -201,7 +263,7 @@ class JEActivityIOMiddleware:
             self.ACTIVITY_ACCOUNTS[act] = acc_list
             self.ACTIVITY_BALANCES[act] = sum(acc['balance'] for acc in acc_list)
 
-            if self.BY_PERIOD or self.BY_UNIT:
+            if self.BY_PERIOD or self.BY_UNIT or self.BY_FUND:
                 for acc in acc_list:
                     if self.BY_PERIOD:
                         key = (acc['period_year'], acc['period_month'])
@@ -213,6 +275,10 @@ class JEActivityIOMiddleware:
                         key = (acc['unit_uuid'], acc['unit_name'])
                         self.ACTIVITY_BALANCES_BY_UNIT[key][act] = sum(
                             acc['balance'] for acc in acc_list if acc['unit_uuid'] == key[0])
+                    if self.BY_FUND:
+                        key = (acc['fund_uuid'], acc['fund_name'])
+                        self.ACTIVITY_BALANCES_BY_FUND[key][act] = sum(
+                            acc['balance'] for acc in acc_list if acc['fund_uuid'] == key[0])
 
 
 class BalanceSheetIOMiddleware:

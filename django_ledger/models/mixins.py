@@ -277,7 +277,8 @@ class AccrualMixIn(models.Model):
         Returns
         -------
         Decimal
-            Financial instrument progress as a Decimal.
+            Financial instrument progress as a Decimal percentage, i.e. % of amount due that is paid.
+            If amount due is zero, then progress is zero.
         """
         if self.accrue:
             return self.progress
@@ -434,19 +435,20 @@ class AccrualMixIn(models.Model):
 
     @classmethod
     def split_amount(cls, amount: Union[Decimal, float],
-                     unit_split: Dict,
+                     unit_fund_split: Dict,
                      account_uuid: UUID,
-                     account_balance_type: str) -> Dict:
+                     account_balance_type: str,
+                     ) -> Dict:
         """
-        Splits an amount into different proportions representing the unit splits.
+        Splits an amount into different proportions representing the unit and fund splits.
         Makes sure that 100% of the amount is numerically allocated taking into consideration decimal points.
 
         Parameters
         ----------
         amount: Decimal or float
             The amount to be split.
-        unit_split: dict
-            A dictionary with information related to each unit split and proportions.
+        unit_fund_split: dict
+            A dictionary with information related to each unit and fund split and proportions.
         account_uuid: UUID
             The AccountModel UUID associated with the splits.
         account_balance_type: str
@@ -455,17 +457,17 @@ class AccrualMixIn(models.Model):
         Returns
         -------
         dict
-            A dictionary with the split information.
+            A dictionary with the split information as follows: (account_uuid, unit_uuid, fund_uuid, balance_type): amount
         """
         running_alloc = 0
-        SPLIT_LEN = len(unit_split) - 1
+        SPLIT_LEN = len(unit_fund_split) - 1
         split_results = dict()
-        for i, (u, p) in enumerate(unit_split.items()):
+        for i, ((u, f), p) in enumerate(unit_fund_split.items()):
             if i == SPLIT_LEN:
-                split_results[(account_uuid, u, account_balance_type)] = amount - running_alloc
+                split_results[(account_uuid, u, f, account_balance_type)] = amount - running_alloc
             else:
                 alloc = round(p * amount, 2)
-                split_results[(account_uuid, u, account_balance_type)] = alloc
+                split_results[(account_uuid, u, f, account_balance_type)] = alloc
                 running_alloc += alloc
         return split_results
 
@@ -597,16 +599,18 @@ class AccrualMixIn(models.Model):
                 process_roles=False,
                 process_ratios=False,
                 signs=False,
-                by_unit=True
+                by_unit=True,
+                by_fund=True,
             )
 
             io_data = io_digest.get_io_data()
 
             accounts_data = io_data['accounts']
 
-            # Index (account_uuid, unit_uuid, balance_type, role)
+            # Index (account_uuid, unit_uuid, fund_uuid, balance_type)
             current_ledger_state = {
-                (a['account_uuid'], a['unit_uuid'], a['balance_type']): a['balance'] for a in accounts_data
+                # TODO JJH fix fund_uuid to work for non-invoice models (e.g. bills)
+                (a['account_uuid'], a['unit_uuid'], a.get('fund_uuid', None), a['balance_type']): a['balance'] for a in accounts_data
                 # (a['account_uuid'], a['unit_uuid'], a['balance_type'], a['role']): a['balance'] for a in digest_data
             }
 
@@ -626,6 +630,12 @@ class AccrualMixIn(models.Model):
                     elif account_uuid_inventory:
                         item['account_uuid'] = account_uuid_inventory
                         item['account_balance_type'] = item.get('item_model__inventory_account__balance_type')
+
+                item_data_gb = groupby(item_data,
+                                       key=lambda a: (a['account_uuid'],
+                                                      a['entity_unit__uuid'],
+                                                      None,  # TODO JJH add fund support for bills, move this back outside the if statement
+                                                      a['account_balance_type']))
 
             elif isinstance(self, lazy_loader.get_invoice_model()):
 
@@ -659,6 +669,7 @@ class AccrualMixIn(models.Model):
                             cogs_adjustment[(
                                 account_uuid_cogs,
                                 item.get('entity_unit__uuid'),
+                                item.get('fund__uuid'),
                                 item.get('item_model__cogs_account__balance_type')
                             )] += tot_amt * progress
 
@@ -666,32 +677,37 @@ class AccrualMixIn(models.Model):
                             inventory_adjustment[(
                                 account_uuid_inventory,
                                 item.get('entity_unit__uuid'),
+                                item.get('fund__uuid'),
                                 item.get('item_model__inventory_account__balance_type')
                             )] -= tot_amt * progress
 
-            item_data_gb = groupby(item_data,
-                                   key=lambda a: (a['account_uuid'],
-                                                  a['entity_unit__uuid'],
-                                                  a['account_balance_type']))
+                item_data_gb = groupby(item_data,
+                                       key=lambda a: (a['account_uuid'],
+                                                      a['entity_unit__uuid'],
+                                                      a['fund__uuid'],
+                                                      a['account_balance_type']))
+
+            else:
+                raise TypeError(f'unsupported financial instrument type: {type(self)}. Update AccruralMixIn.migrate_state() method to support this type of financial instrument.')
 
             # scaling down item amount based on progress...
             progress_item_idx = {
-                idx: round(sum(a['account_unit_total'] for a in ad) * progress, 2) for idx, ad in item_data_gb
+                idx: round(sum(a['account_unit_fund_total'] for a in ad) * progress, 2) for idx, ad in item_data_gb
             }
 
-            # tuple ( unit_uuid, total_amount ) sorted by uuid...
+            # tuple ( unit_uuid, fund_uuid, total_amount ) sorted by uuid...
             # sorting before group by...
-            ua_gen = list((k[1], v) for k, v in progress_item_idx.items())
-            ua_gen.sort(key=lambda a: str(a[0]) if a[0] else '')
+            unit_fund_amounts_gen = list(((k[1], k[2]), v) for k, v in progress_item_idx.items())
+            unit_fund_amounts_gen.sort(key=lambda a: str(a[0]) if a[0] else '')
 
-            unit_amounts = {
-                u: sum(a[1] for a in l) for u, l in groupby(ua_gen, key=lambda x: x[0])
+            unit_fund_amounts = {
+                uf: sum(a[1] for a in l) for uf, l in groupby(unit_fund_amounts_gen, key=lambda x: x[0])
             }
-            total_amount = sum(unit_amounts.values())
+            total_amount = sum(unit_fund_amounts.values())
 
-            # { unit_uuid: float (percent) }
-            unit_percents = {
-                k: (v / total_amount) if progress and total_amount else Decimal('0.00') for k, v in unit_amounts.items()
+            # { (unit_uuid, fund_uuid) : float (percent) }
+            unit_fund_percents = {
+                k: (v / total_amount) if progress and total_amount else Decimal('0.00') for k, v in unit_fund_amounts.items()
             }
 
             if not void:
@@ -701,19 +717,19 @@ class AccrualMixIn(models.Model):
 
             amount_paid_split = self.split_amount(
                 amount=new_state['amount_paid'],
-                unit_split=unit_percents,
+                unit_fund_split=unit_fund_percents,
                 account_uuid=self.cash_account_id,
                 account_balance_type='debit'
             )
             amount_prepaid_split = self.split_amount(
                 amount=new_state['amount_receivable'],
-                unit_split=unit_percents,
+                unit_fund_split=unit_fund_percents,
                 account_uuid=self.prepaid_account_id,
                 account_balance_type='debit'
             )
             amount_unearned_split = self.split_amount(
                 amount=new_state['amount_unearned'],
-                unit_split=unit_percents,
+                unit_fund_split=unit_fund_percents,
                 account_uuid=self.unearned_account_id,
                 account_balance_type='credit'
             )
@@ -747,44 +763,48 @@ class AccrualMixIn(models.Model):
                 JournalEntryModel = lazy_loader.get_journal_entry_model()
                 TransactionModel = lazy_loader.get_txs_model()
 
-                unit_uuids = list(set(k[1] for k in idx_keys))
+                # list of ( (unit_uuid, fund_uuid) )
+                unit_fund_uuids = list(set((k[1], k[2]) for k in idx_keys))
 
                 if je_timestamp:
                     je_timestamp = validate_io_timestamp(dt=je_timestamp)
 
                 now_timestamp = get_localtime() if not je_timestamp else je_timestamp
                 je_list = {
-                    u: JournalEntryModel(
+                    (u, f): JournalEntryModel(
                         entity_unit_id=u,
                         timestamp=now_timestamp,
                         description=self.get_migrate_state_desc(),
                         origin='migration',
                         ledger_id=self.ledger_id
-                    ) for u in unit_uuids
+                    ) for (u, f) in unit_fund_uuids
                 }
 
-                for u, je in je_list.items():
+                for uf, je in je_list.items():
                     je.clean(verify=False)
 
                 txs_list = [
-                    (unit_uuid, TransactionModel(
-                        journal_entry=je_list.get(unit_uuid),
+                    (unit_uuid, fund_uuid, TransactionModel(
+                        journal_entry=je_list.get((unit_uuid, fund_uuid)),
                         amount=abs(round(amt, 2)),
                         tx_type=self.get_tx_type(acc_bal_type=bal_type, adjustment_amount=amt),
+                        fund_id=fund_uuid,
                         account_id=acc_uuid,
                         description=self.get_migrate_state_desc()
-                    )) for (acc_uuid, unit_uuid, bal_type), amt in diff_idx.items() if amt
+                    )) for (acc_uuid, unit_uuid, fund_uuid, bal_type), amt in diff_idx.items() if amt
                 ]
 
-                for unit_uuid, tx in txs_list:
+                # clean each transaction
+                for unit_uuid, fund_uuid, tx in txs_list:
                     tx.clean()
 
-                for uid in unit_uuids:
-                    # validates each unit txs independently...
-                    check_tx_balance(tx_data=[tx for ui, tx in txs_list if uid == ui], perform_correction=True)
+                # validates each unit & fund txs independently...
+                for (uid, fid) in unit_fund_uuids:
+                    check_tx_balance(tx_data=[tx for ui, fi, tx in txs_list if uid == ui and fid == fi],
+                                     perform_correction=True)
 
                 # validates all txs as a whole (for safety)...
-                txs = [tx for ui, tx in txs_list]
+                txs = [tx for uid, fid, tx in txs_list]
                 check_tx_balance(tx_data=txs, perform_correction=True)
                 TransactionModel.objects.bulk_create(txs)
 

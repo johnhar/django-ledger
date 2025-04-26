@@ -26,7 +26,7 @@ from django_ledger.models import (
 from django_ledger.views.mixins import (
     QuarterlyReportMixIn, YearlyReportMixIn,
     MonthlyReportMixIn, DateReportMixIn, DjangoLedgerSecurityMixIn, EntityUnitMixIn,
-    DigestContextMixIn, UnpaidElementsMixIn, BaseDateNavigationUrlMixIn
+    DigestContextMixIn, UnpaidElementsMixIn, BaseDateNavigationUrlMixIn, FundMixIn
 )
 
 
@@ -172,11 +172,28 @@ class EntityDeleteView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuerySetMi
 # DASHBOARD VIEWS START ----
 class EntityModelDetailHandlerView(DjangoLedgerSecurityMixIn,
                                    EntityUnitMixIn,
+                                   FundMixIn,
                                    RedirectView):
+    def get_context_data(self, **kwargs):
+        if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
+            # Call the EntityUnitMixIn's get_context_data() explicitly
+            context = EntityUnitMixIn.get_context_data(self, **kwargs)
+            print(f'using unit dashboard context')      # TODO JJH remove
+        elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
+            # Call the FundMixIn's get_context_data() explicitly
+            context = FundMixIn.get_context_data(self, **kwargs)
+            print(f'using fund dashboard context')      # TODO JJH remove
+        else:
+            # Default behavior if neither match
+            context = super().get_context_data(**kwargs)
+            print(f'using entity dashboard context')      # TODO JJH remove
+
+        return context
 
     def get_redirect_url(self, *args, **kwargs):
         loc_date = get_localdate()
         unit_slug = self.get_unit_slug()
+        fund_slug = self.get_fund_slug()
         if unit_slug:
             return reverse('django_ledger:unit-dashboard-month',
                            kwargs={
@@ -185,6 +202,15 @@ class EntityModelDetailHandlerView(DjangoLedgerSecurityMixIn,
                                'year': loc_date.year,
                                'month': loc_date.month,
                            })
+        elif fund_slug:
+            return reverse('django_ledger:fund-dashboard-month',
+                           kwargs={
+                               'entity_slug': self.kwargs['entity_slug'],
+                               'fund_slug': fund_slug,
+                               'year': loc_date.year,
+                               'month': loc_date.month,
+                           })
+
         return reverse('django_ledger:entity-dashboard-month',
                        kwargs={
                            'entity_slug': self.kwargs['entity_slug'],
@@ -198,6 +224,7 @@ class EntityModelDetailBaseView(DjangoLedgerSecurityMixIn,
                                 BaseDateNavigationUrlMixIn,
                                 UnpaidElementsMixIn,
                                 EntityUnitMixIn,
+                                FundMixIn,
                                 DigestContextMixIn,
                                 YearlyReportMixIn,
                                 DetailView):
@@ -214,20 +241,35 @@ class EntityModelDetailBaseView(DjangoLedgerSecurityMixIn,
     IO_DIGEST_BOUNDED = True
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        fund_slug = None
+        unit_slug = None
+        if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
+            # Call the EntityUnitMixIn's get_context_data() explicitly
+            context = EntityUnitMixIn.get_context_data(self, **kwargs)
+            unit_slug = context['unit_slug']
+        elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
+            # Call the FundMixIn's get_context_data() explicitly
+            context = FundMixIn.get_context_data(self, **kwargs)
+            fund_slug = context['fund_slug']
+        else:
+            # Default behavior if neither match
+            context = super().get_context_data(**kwargs)
+            print(f'using entity dashboard context')      # TODO JJH remove
+
         entity_model: EntityModel = self.object
         context['page_title'] = entity_model.name
         context['header_title'] = entity_model.name
         context['header_subtitle'] = _('Dashboard')
         context['header_subtitle_icon'] = 'mdi:monitor-dashboard'
 
-        unit_slug = context.get('unit_slug', self.get_unit_slug())
         KWARGS = dict(entity_slug=self.kwargs['entity_slug'])
 
         if unit_slug:
-            KWARGS['unit_slug'] = unit_slug
+            KWARGS[EntityUnitMixIn.UNIT_SLUG_KWARG] = unit_slug
+        elif fund_slug:
+            KWARGS[FundMixIn.FUND_SLUG_KWARG] = fund_slug
 
-        url_pointer = 'entity' if not unit_slug else 'unit'
+        url_pointer = 'unit' if unit_slug else 'fund' if fund_slug else 'entity'
         context['pnl_chart_id'] = f'djl-entity-pnl-chart-{randint(10000, 99999)}'
         context['pnl_chart_endpoint'] = reverse(f'django_ledger:{url_pointer}-json-pnl', kwargs=KWARGS)
         context['payables_chart_id'] = f'djl-entity-payables-chart-{randint(10000, 99999)}'

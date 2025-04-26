@@ -457,16 +457,15 @@ class DigestContextMixIn:
             if not from_date:
                 from_date = context['from_date']
 
-            # gets the unit if view inherits EntityUnitMixIn...
-            if hasattr(self, 'get_unit_slug'):
-                unit_slug = getattr(self, 'get_unit_slug')()
-            else:
-                unit_slug = None
+            # gets the unit and fund if view inherits EntityUnitMixIn...
+            unit_slug = getattr(self, 'get_unit_slug')() if hasattr(self, 'get_unit_slug') else None
+            fund_slug = getattr(self, 'get_fund_slug')() if hasattr(self, 'get_fund_slug') else None
 
             if self.IO_DIGEST_UNBOUNDED:
                 io_digest = entity_model.digest(user_model=self.request.user,
                                                 to_date=to_date,
                                                 unit_slug=unit_slug,
+                                                fund_slug=fund_slug,
                                                 by_period=True if by_period else False,
                                                 process_ratios=True,
                                                 process_roles=True,
@@ -482,6 +481,7 @@ class DigestContextMixIn:
                     to_date=to_date,
                     from_date=from_date,
                     unit_slug=unit_slug,
+                    fund_slug=fund_slug,
                     by_period=True if by_period else False,
                     process_ratios=True,
                     process_roles=True,

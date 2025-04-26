@@ -470,6 +470,7 @@ class EntityModelClosingEntryMixIn:
             to_date=to_date,
             from_date=from_date,
             by_unit=True,
+            by_fund=True,
             by_activity=True,
             signs=False,
             **kwargs

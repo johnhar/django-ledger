@@ -585,6 +585,7 @@ class InvoiceModelAbstract(
         return queryset.select_related('item_model').order_by(
             'item_model__earnings_account__uuid',
             'entity_unit__uuid',
+            'fund__uuid',
             'item_model__earnings_account__balance_type').values(
             'item_model__earnings_account__uuid',
             'item_model__earnings_account__balance_type',
@@ -596,9 +597,11 @@ class InvoiceModelAbstract(
             'item_model__inventory_received_value',
             'entity_unit__slug',
             'entity_unit__uuid',
+            'fund__slug',
+            'fund__uuid',
             'quantity',
             'total_amount').annotate(
-            account_unit_total=Sum('total_amount'))
+            account_unit_fund_total=Sum('total_amount'))
 
     def update_amount_due(self, itemtxs_qs: Optional[ItemTransactionModelQuerySet] = None) -> ItemTransactionModelQuerySet:
         """

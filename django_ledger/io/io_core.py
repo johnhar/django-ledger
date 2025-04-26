@@ -646,6 +646,7 @@ class IODatabaseMixIn:
                         by_tx_type: bool = False,
                         by_period: bool = False,
                         by_unit: bool = False,
+                        by_fund: bool = False,
                         activity: Optional[str] = None,
                         role: str = Optional[str],
                         accounts: Optional[Union[str, List[str], Set[str]]] = None,
@@ -693,6 +694,9 @@ class IODatabaseMixIn:
         by_unit : bool
             Indicates whether transactions should be grouped by entity unit.
             Defaults to False.
+        by_fund : bool
+            Indicates whether transactions should be grouped by fund.
+            Defaults to False.
         activity : Optional[str]
             A specific activity identifier to filter results. If provided, only
             transactions related to this activity will be included.
@@ -738,6 +742,7 @@ class IODatabaseMixIn:
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
                 ).for_unit(unit_slug=unit_slug)
+                print(f'database_digest for entity "{self.name}" found {txs_queryset_init.count()} transactions for entity unit {unit_slug}')      # TODO JJH remove
 
             elif fund_slug:
 
@@ -745,6 +750,7 @@ class IODatabaseMixIn:
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
                 ).for_fund(fund_slug=fund_slug)
+                print(f'database_digest for entity "{self.name}" found {txs_queryset_init.count()} transactions for fund {fund_slug}')      # TODO JJH remove
 
             else:
                 txs_queryset_init = TransactionModel.objects.for_entity(
@@ -760,6 +766,7 @@ class IODatabaseMixIn:
                 user_model=user_model,
                 entity_slug=entity_slug,
             ).for_unit(unit_slug=unit_slug or self)
+            print(f'database_digest for unit "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         elif self.is_fund_model():
             if not entity_slug:
@@ -770,6 +777,7 @@ class IODatabaseMixIn:
                 user_model=user_model,
                 entity_slug=entity_slug,
             ).for_fund(fund_slug=fund_slug or self)
+            print(f'database_digest for fund "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         elif self.is_ledger_model():
             if not entity_slug:
@@ -780,6 +788,7 @@ class IODatabaseMixIn:
                 entity_slug=entity_slug,
                 user_model=user_model,
             ).for_ledger(ledger_model=self)
+            print(f'database_digest for ledger "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         else:
             raise IOValidationError(
@@ -912,6 +921,7 @@ class IODatabaseMixIn:
                     output_field=DecimalField()
                 ))
 
+        # VALUES = list of database fields to include in the QuerySet output
         VALUES = [
             'account__uuid',
             'account__balance_type',
@@ -922,6 +932,7 @@ class IODatabaseMixIn:
             'tx_type',
         ]
 
+        # specifies the aggregations that will be applied to the resulting groups
         ANNOTATE = {'balance': Sum('amount')}
         if io_result.is_bounded:
             ANNOTATE = {'balance': Sum('amount_io')}
@@ -931,6 +942,10 @@ class IODatabaseMixIn:
         if by_unit:
             ORDER_BY.append('journal_entry__entity_unit__uuid')
             VALUES += ['journal_entry__entity_unit__uuid', 'journal_entry__entity_unit__name']
+
+        if by_fund:
+            ORDER_BY.append('fund__uuid')
+            VALUES += ['fund__uuid', 'fund__name']
 
         if by_period:
             ORDER_BY.append('journal_entry__timestamp')
@@ -960,6 +975,7 @@ class IODatabaseMixIn:
                       accounts: Optional[Union[Set[str], List[str]]] = None,
                       signs: bool = True,
                       by_unit: bool = False,
+                      by_fund: bool = False,
                       by_activity: bool = False,
                       by_tx_type: bool = False,
                       by_period: bool = False,
@@ -1000,6 +1016,8 @@ class IODatabaseMixIn:
             Defaults to True.
         by_unit : bool
             Whether to group the results by unit. Defaults to False.
+        by_fund : bool
+            Whether to group the results by fund. Defaults to False.
         by_activity : bool
             Whether to group the results by activity. Defaults to False.
         by_tx_type : bool
@@ -1031,6 +1049,7 @@ class IODatabaseMixIn:
             to_date=to_date,
             from_date=from_date,
             by_unit=by_unit,
+            by_fund=by_fund,
             by_activity=by_activity,
             by_tx_type=by_tx_type,
             by_period=by_period,
@@ -1049,6 +1068,7 @@ class IODatabaseMixIn:
         gb_key = lambda a: (
             a['account__uuid'],
             a.get('journal_entry__entity_unit__uuid') if by_unit else None,
+            a.get('fund__uuid') if by_fund else None,
             a.get('dt_idx').year if by_period else None,
             a.get('dt_idx').month if by_period else None,
             a.get('journal_entry__activity') if by_activity else None,
@@ -1095,8 +1115,10 @@ class IODatabaseMixIn:
             A tuple consisting of grouped key values. Expected structure:
             - The first element represents the account UUID.
             - The second element represents the unit UUID.
-            - The third and fourth elements represent the period year and month, respectively.
-            - The sixth element represents the transaction type.
+            - The third element represents the fund UUID.
+            - The fourth and fifth elements represent the period year and month, respectively.
+            - The sixth element represents the activity.
+            - The seventh element represents the transaction type.
 
         g : iterable
             An iterable of grouped account data, typically containing dictionaries with
@@ -1111,6 +1133,8 @@ class IODatabaseMixIn:
             - 'coa_slug'
             - 'unit_uuid'
             - 'unit_name'
+            - 'fund_uuid'
+            - 'fund_name'
             - 'activity'
             - 'period_year'
             - 'period_month'
@@ -1128,15 +1152,17 @@ class IODatabaseMixIn:
             'coa_slug': gl[0]['account__coa_model__slug'],
             'unit_uuid': k[1],
             'unit_name': gl[0].get('journal_entry__entity_unit__name'),
+            'fund_uuid': k[2],
+            'fund_name': gl[0].get('fund__name'),
             'activity': gl[0].get('journal_entry__activity'),
-            'period_year': k[2],
-            'period_month': k[3],
+            'period_year': k[3],
+            'period_month': k[4],
             'role_bs': roles_module.BS_ROLES.get(gl[0]['account__role']),
             'role': gl[0]['account__role'],
             'code': gl[0]['account__code'],
             'name': gl[0]['account__name'],
             'balance_type': gl[0]['account__balance_type'],
-            'tx_type': k[5],
+            'tx_type': k[6],
             'balance': sum(a['balance'] for a in gl),
         }
 
@@ -1158,6 +1184,7 @@ class IODatabaseMixIn:
                equity_only: bool = False,
                by_period: bool = False,
                by_unit: bool = False,
+               by_fund: bool = False,
                by_activity: bool = False,
                by_tx_type: bool = False,
                balance_sheet_statement: bool = False,
@@ -1209,6 +1236,8 @@ class IODatabaseMixIn:
             Organizes or groups the output by accounting periods if `True`.
         by_unit : bool, default=False
             Organizes or processes data specific to each unit when set to `True`.
+        by_fund : bool, default=False
+            Organizes or processes data specific to each fund when set to `True`.
         by_activity : bool, default=False
             Groups or segregates the processed data by activity when `True`.
         by_tx_type : bool, default=False
@@ -1250,6 +1279,7 @@ class IODatabaseMixIn:
         io_state['to_date'] = to_date
         io_state['by_unit'] = by_unit
         io_state['unit_slug'] = unit_slug
+        io_state['by_fund'] = by_fund
         io_state['fund_slug'] = fund_slug
         io_state['entity_slug'] = entity_slug
         io_state['by_period'] = by_period
@@ -1270,6 +1300,7 @@ class IODatabaseMixIn:
             equity_only=equity_only,
             by_period=by_period,
             by_unit=by_unit,
+            by_fund=by_fund,
             by_activity=by_activity,
             by_tx_type=by_tx_type,
             use_closing_entry=use_closing_entry,
@@ -1285,7 +1316,8 @@ class IODatabaseMixIn:
             roles_mgr = AccountRoleIOMiddleware(
                 io_data=io_state,
                 by_period=by_period,
-                by_unit=by_unit
+                by_unit=by_unit,
+                by_fund=by_fund,
             )
 
             io_state = roles_mgr.digest()
@@ -1299,7 +1331,8 @@ class IODatabaseMixIn:
             group_mgr = AccountGroupIOMiddleware(
                 io_data=io_state,
                 by_period=by_period,
-                by_unit=by_unit
+                by_unit=by_unit,
+                by_fund=by_fund,
             )
             io_state = group_mgr.digest()
 

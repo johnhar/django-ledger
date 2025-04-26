@@ -620,6 +620,7 @@ class BillModelAbstract(
 
         return queryset.order_by('item_model__expense_account__uuid',
                                  'entity_unit__uuid',
+                                 'fund__uuid',
                                  'item_model__expense_account__balance_type').values(
             'item_model__expense_account__uuid',
             'item_model__inventory_account__uuid',
@@ -627,8 +628,10 @@ class BillModelAbstract(
             'item_model__inventory_account__balance_type',
             'entity_unit__slug',
             'entity_unit__uuid',
+            'fund__slug',
+            'fund__uuid',
             'total_amount').annotate(
-            account_unit_total=Sum('total_amount')
+            account_unit_fund_total=Sum('total_amount')
         )
 
     def update_amount_due(self, itemtxs_qs: Optional[
