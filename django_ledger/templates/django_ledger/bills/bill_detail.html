@@ -107,8 +107,10 @@
                                     {% for bill_item in itemtxs_qs %}
                                         <tr>
                                             <td>{{ bill_item.item_model }}</td>
-                                            <td>{% if bill_item.fund %}
-                                                {{ bill_item.fund.name }}{% endif %}</td>
+                                            {% if bill.ledger.entity.is_fund_enabled %}
+                                              <td>{% if bill_item.fund %}
+                                                  {{ bill_item.fund.name }}{% endif %}</td>
+                                            {% endif %}
                                             <td>{% if bill_item.entity_unit %}
                                                 {{ bill_item.entity_unit }}{% endif %}</td>
                                             <td>{% currency_symbol %}{{ bill_item.unit_cost | currency_format }}</td>
@@ -127,6 +129,9 @@
                                     <tfoot>
                                     <tr>
                                         <th></th>
+                                        {% if bill.ledger.entity.is_fund_enabled %}
+                                        <th></th>
+                                        {% endif %}
                                         <th></th>
                                         <th></th>
                                         <th>{% trans 'Total' %}</th>

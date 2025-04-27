@@ -845,6 +845,7 @@ def bill_item_formset_table(context, item_formset):
         'bill_pk': context['view'].kwargs['bill_pk'],
         'total_amount__sum': context['total_amount__sum'],
         'item_formset': item_formset,
+        'is_fund_enabled': context['bill_model'].ledger.entity.is_fund_enabled(),
     }
 
 

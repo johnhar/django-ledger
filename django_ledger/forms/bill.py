@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_ACC_PAYABLE
 from django_ledger.models import (ItemModel, AccountModel, BillModel, ItemTransactionModel,
-                                  VendorModel, EntityUnitModel, EntityModel)
+                                  VendorModel, EntityUnitModel, FundModel, EntityModel)
 from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
 
 
@@ -214,9 +214,10 @@ class BillModelConfigureForm(BaseBillModelUpdateForm):
 
 class BillItemTransactionForm(ModelForm):
 
-    # def __init__(self, entity_unit_qs, *args, **kwargs):
+    # def __init__(self, entity_unit_qs, fund_qs, *args, **kwargs):
     #     super().__init__(self, *args, **kwargs)
     #     self.fields['entity_unit'].queryset = entity_unit_qs
+    #     self.fields['fund'].queryset = fund_qs
 
     def clean(self):
         cleaned_data = super(BillItemTransactionForm, self).clean()
@@ -233,6 +234,7 @@ class BillItemTransactionForm(ModelForm):
             'item_model',
             'unit_cost',
             'entity_unit',
+            'fund',
             'quantity',
         ]
         widgets = {
@@ -240,6 +242,9 @@ class BillItemTransactionForm(ModelForm):
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
             }),
             'entity_unit': Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
+            }),
+            'fund': Select(attrs={
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
             }),
             'unit_cost': TextInput(attrs={
@@ -268,21 +273,25 @@ class BaseBillItemTransactionFormset(BaseModelFormSet):
 
         self.items_qs = self.ENTITY_MODEL.itemmodel_set.bills()
         self.entity_unit_qs = self.ENTITY_MODEL.entityunitmodel_set.all()
+        self.fund_qs = self.ENTITY_MODEL.fundmodel_set.all()
 
         for form in self.forms:
             form.fields['item_model'].queryset = self.items_qs
             form.fields['entity_unit'].queryset = self.entity_unit_qs
+            form.fields['fund'].queryset = self.fund_qs
 
             if not self.BILL_MODEL.can_edit_items():
                 form.fields['item_model'].disabled = True
                 form.fields['quantity'].disabled = True
                 form.fields['unit_cost'].disabled = True
                 form.fields['entity_unit'].disabled = True
+                form.fields['fund'].disabled = True
 
             instance: ItemTransactionModel = form.instance
             if instance.po_model_id:
                 form.fields['item_model'].disabled = True
                 form.fields['entity_unit'].disabled = True
+                form.fields['fund'].disabled = True
 
 
 def get_bill_itemtxs_formset_class(bill_model: BillModel):

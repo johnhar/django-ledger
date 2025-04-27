@@ -12,6 +12,7 @@
                 {% csrf_token %}
                 {{ item_formset.non_form_errors }}
                 {{ item_formset.management_form }}
+
                 <table class="table is-fullwidth is-narrow is-striped is-bordered">
                     <thead>
                     <tr>
@@ -20,6 +21,9 @@
                         <th>{% trans 'PO Amount' %}</th>
                         <th>{% trans 'Quantity' %}</th>
                         <th>{% trans 'Unit Cost' %}</th>
+                        {% if is_fund_enabled %}
+                        <th>{% trans 'Fund' %}</th>
+                        {% endif %}
                         <th>{% trans 'Unit' %}</th>
                         <th>{% trans 'Total' %}</th>
                         <th>{% trans 'Delete' %}</th>
@@ -46,6 +50,9 @@
                                 </a>{% endif %}</td>
                             <td id="{{ f.instance.html_id_quantity }}">{{ f.quantity }}</td>
                             <td id="{{ f.instance.html_id_unit_cost }}">{{ f.unit_cost }}</td>
+                            {% if is_fund_enabled %}
+                            <td>{{ f.fund }}</td>
+                            {% endif %}
                             <td>{{ f.entity_unit }}</td>
                             <td class="has-text-right" id="{{ f.instance.html_id_total_amount }}">
                                 {% currency_symbol %}{{ f.instance.total_amount | currency_format }}</td>
@@ -63,6 +70,9 @@
                         <th></th>
                         <th></th>
                         <th></th>
+                        {% if is_fund_enabled %}
+                        <th></th>
+                        {% endif %}
                         <th></th>
                         <th class="has-text-right">{% trans 'Total' %}</th>
                         <th class="has-text-right">{% currency_symbol %}{{ total_amount__sum | currency_format }}</th>
