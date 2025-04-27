@@ -472,8 +472,35 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
             x5=self.code
         )
 
+    def alt_str(self):
+        """
+        Returns a formatted string representation of the object.
+
+        The formatted string includes the code, name, role, and balance type
+        of the object. The role is converted to uppercase for consistency,
+        and the balance type is displayed as is. This method provides a
+        concise textual representation for quick identification or display.
+
+        Returns:
+            str: A formatted string in the format 'code: name (ROLE/BALANCE_TYPE)'.
+        """
+        return f'{self.code}: {self.name} ({self.role.upper()}/{self.balance_type})'
+
     @property
     def coa_slug(self):
+        """
+        Property that retrieves the `coa_slug` attribute from the object. If the attribute
+        is not found, it fetches the `slug` attribute from the `coa_model`.
+
+        Attributes:
+            _coa_slug (str): Cached value of the `coa_slug` if it exists.
+            coa_model (Any): Object containing the `slug` attribute that serves
+                as a fallback when `_coa_slug` is not present.
+
+        Returns:
+            str: The value of `_coa_slug` if defined, or the `slug` attribute from
+            `coa_model` if `_coa_slug` is not available.
+        """
         try:
             return getattr(self, '_coa_slug')
         except AttributeError:
@@ -481,6 +508,19 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
 
     @property
     def entity_slug(self):
+        """
+            Retrieve the slug value associated with the entity.
+
+            This property method returns the value of the private attribute
+            '_entity_slug' for the current instance. The purpose of the
+            slug is typically to provide a URL-friendly string representing
+            the entity.
+
+            Returns
+            -------
+            Any
+                The value of the '_entity_slug' attribute.
+        """
         return getattr(self, '_entity_slug')
 
     @classmethod
@@ -632,11 +672,6 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
         """
         Determines whether the current Account Model role belongs to the income group.
 
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing attribute 'role'.
-
         Returns
         -------
         bool
@@ -658,10 +693,6 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
     def is_expense(self) -> bool:
         """
         Checks if the current Account Model `role` is categorized under `GROUP_EXPENSES`.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -1059,7 +1090,6 @@ class AccountModel(AccountModelAbstract):
     """
 
     class Meta(AccountModelAbstract.Meta):
-        swappable = 'DJANGO_LEDGER_ACCOUNT_MODEL'
         abstract = False
 
 
