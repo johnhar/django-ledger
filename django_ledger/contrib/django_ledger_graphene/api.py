@@ -15,6 +15,7 @@ class Query(
     # UnitOfMeasureQuery,
     # VendorsQuery,
     # EntityUnitQuery,
+    # FundQuery,
     # LedgerQuery,
     # TransactionsQuery,
     # JournalEntryQuery,

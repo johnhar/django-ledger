@@ -3,7 +3,7 @@ from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 
-from django_ledger.models import EntityUnitModel
+from django_ledger.models import EntityUnitModel, FundModel
 
 
 class EntityUnitNode(DjangoObjectType):
@@ -13,15 +13,38 @@ class EntityUnitNode(DjangoObjectType):
             'name': ['exact', 'icontains', 'istartswith'],
         }
         interfaces = (relay.Node,)
+
+
 class EntityUnitQuery(graphene.ObjectType):
     all_entity_unit = DjangoFilterConnectionField(EntityUnitNode, slug_name=graphene.String(required=True))
 
     def resolve_all_vendors(self, info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return EntityUnitModel.objects.for_entity(
-            entity_slug=slug_name,
-            user_model=info.context.user
-        )
+                entity_slug=slug_name,
+                user_model=info.context.user
+            )
         else:
             return EntityUnitModel.objects.none()
 
+
+class FundNode(DjangoObjectType):
+    class Meta:
+        model = FundModel
+        filter_fields = {
+            'name': ['exact', 'icontains', 'istartswith'],
+        }
+        interfaces = (relay.Node,)
+
+
+class FundQuery(graphene.ObjectType):
+    all_entity_unit = DjangoFilterConnectionField(FundNode, slug_name=graphene.String(required=True))
+
+    def resolve_all_vendors(self, info, slug_name, **kwargs):
+        if info.context.user.is_authenticated:
+            return FundModel.objects.for_entity(
+                entity_slug=slug_name,
+                user_model=info.context.user
+            )
+        else:
+            return FundModel.objects.none()
