@@ -9,7 +9,7 @@ from django.utils.html import format_html
 
 from django_ledger.admin.chart_of_accounts import ChartOfAccountsInLine
 from django_ledger.io.io_core import get_localtime
-from django_ledger.models import EntityUnitModel
+from django_ledger.models import EntityUnitModel, FundModel
 from django_ledger.models.entity import EntityModel, EntityManagementModel
 
 
@@ -48,6 +48,33 @@ class EntityUnitModelInLine(TabularInline):
         'hidden'
     ]
 
+
+class FundModelInLineFormSet(BaseInlineFormSet):
+
+    def save_new(self, form, commit=True):
+        setattr(form.instance, self.fk.name, self.instance)
+        if commit:
+            fund_model = FundModel.add_root(
+                instance=super().save_new(form, commit=False)
+            )
+            return fund_model
+        return super().save_new(form, commit=False)
+
+
+class FundModelInLine(TabularInline):
+    model = FundModel
+    formset = FundModelInLineFormSet
+    extra = 0
+    readonly_fields = [
+        'slug'
+    ]
+    fields = [
+        'slug',
+        'name',
+        'document_prefix',
+        'active',
+        'hidden'
+    ]
 
 class EntityModelAdmin(ModelAdmin):
     list_display = [
@@ -109,6 +136,7 @@ class EntityModelAdmin(ModelAdmin):
     inlines = [
         ChartOfAccountsInLine,
         EntityUnitModelInLine,
+        FundModelInLine,
         EntityManagementInLine
     ]
     actions = [
