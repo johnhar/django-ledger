@@ -22,7 +22,7 @@
                     <td>{{ transaction_model.account_code }}</td>
                     <td>{{ transaction_model.account_name }}</td>
                     {% if is_fund_enabled %}
-                      <td>{{ transaction_model.fund.name }}</td>
+                      <td>{{ transaction_model.fund_name }}</td>
                     {% endif %}
                     <td>{% if transaction_model.entity_unit_name %}
                         {{ transaction_model.entity_unit_name }}{% endif %}</td>
@@ -65,7 +65,7 @@
                     <td>{{ transaction_model.account_code }}</td>
                     <td>{{ transaction_model.account_name }}</td>
                     {% if is_fund_enabled %}
-                      <td>{{ transaction_model.fund.name }}</td>
+                      <td>{{ transaction_model.fund_name }}</td>
                     {% endif %}
                     <td>{% if transaction_model.is_credit %}${{ transaction_model.amount | currency_format }}{% endif %}</td>
                     <td>{% if transaction_model.is_debit %}${{ transaction_model.amount | currency_format }}{% endif %}</td>
