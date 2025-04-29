@@ -20,6 +20,9 @@
                         <th>{% trans 'Unit Cost' %}</th>
                         <th>{% trans 'Unit Sales Price' %}</th>
                         <th>{% trans 'Business Unit' %}</th>
+                        {% if is_fund_enabled %}
+                          <th>{% trans 'Fund' %}</th>
+                        {% endif %}
                         <th>{% trans 'Total Cost' %}</th>
                         <th>{% trans 'Total Revenue' %}</th>
                         <th>{% trans 'Delete' %}</th>
@@ -41,6 +44,9 @@
                             <td id="{{ f.instance.html_id_unit_cost }}">{{ f.ce_unit_cost_estimate }}</td>
                             <td>{{ f.ce_unit_revenue_estimate }}</td>
                             <td>{{ f.entity_unit }}</td>
+                            {% if is_fund_enabled %}
+                              <td>{{ f.fund }}</td>
+                            {% endif %}
                             <td class="has-text-right" id="{{ f.instance.html_id_total_amount }}">
                                 {% currency_symbol %}{{ f.instance.ce_cost_estimate | currency_format }}</td>
                             <td class="has-text-right" id="{{ f.instance.html_id_total_amount }}">

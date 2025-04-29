@@ -19,6 +19,9 @@
                         <th>{% trans 'Unit Cost' %}</th>
                         <th>{% trans 'Quantity' %}</th>
                         <th>{% trans 'Unit' %}</th>
+                        {% if is_fund_enabled %}
+                          <th>{% trans 'Fund' %}</th>
+                        {% endif %}
                         <th>{% trans 'Amount' %}</th>
                         <th>{% trans 'Status' %}</th>
                         {% if itemtxs_formset.can_delete %}
@@ -44,6 +47,9 @@
                             <td id="{{ f.instance.html_id_unit_cost }}">{{ f.po_unit_cost }}</td>
                             <td id="{{ f.instance.html_id_quantity }}">{{ f.po_quantity }}</td>
                             <td>{{ f.entity_unit }}</td>
+                            {% if is_fund_enabled %}
+                              <td>{{ f.fund }}</td>
+                            {% endif %}
                             <td class="has-text-right" id="{{ f.instance.html_id_total_amount }}">
                                 {% currency_symbol %}{{ f.instance.po_total_amount | currency_format }}</td>
                             <td>{{ f.po_item_status }}</td>

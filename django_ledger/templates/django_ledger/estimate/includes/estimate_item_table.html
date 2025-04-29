@@ -21,10 +21,10 @@
         {% for ce_item in ce_item_list %}
             <tr>
                 <td>{{ ce_item.item_model }}</td>
-                <td>{% if ce_item.fund %}
-                    {{ ce_item.fund.name }}{% endif %}</td>
-                <td>{% if ce_item.entity_unit %}
-                    {{ ce_item.entity_unit }}{% endif %}</td>
+                {% if is_fund_enabled %}
+                  <td>{% if ce_item.fund %}{{ ce_item.fund.name }}{% endif %}</td>
+                {% endif %}
+                <td>{% if ce_item.entity_unit %}{{ ce_item.entity_unit }}{% endif %}</td>
                 <td>{{ ce_item.ce_quantity }}</td>
                 <td>{% currency_symbol %}{{ ce_item.ce_unit_cost_estimate | currency_format }}</td>
                 <td>

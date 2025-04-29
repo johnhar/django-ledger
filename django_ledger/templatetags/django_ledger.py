@@ -862,11 +862,15 @@ def bill_item_formset_table(context, item_formset):
 
 @register.inclusion_tag('django_ledger/purchase_order/includes/po_item_formset.html', takes_context=True)
 def po_item_formset_table(context, po_model, itemtxs_formset):
-    return {
+    result = {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'po_model': po_model,
         'itemtxs_formset': itemtxs_formset,
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = po_model.entity.is_fund_enabled()
+
+    return result
 
 
 @register.inclusion_tag('django_ledger/uom/tags/uom_table.html', takes_context=True)
@@ -924,10 +928,15 @@ def po_item_table(context, queryset):
 
 @register.inclusion_tag('django_ledger/estimate/tags/ce_item_formset.html', takes_context=True)
 def customer_estimate_item_formset(context, item_formset):
-    return {
+    result = {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'ce_pk': context['view'].kwargs['ce_pk'],
         'ce_revenue_estimate__sum': context['ce_revenue_estimate__sum'],
         'ce_cost_estimate__sum': context['ce_cost_estimate__sum'],
         'item_formset': item_formset,
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = EntityModel.objects.filter(
+            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
+
+    return result

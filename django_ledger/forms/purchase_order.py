@@ -10,8 +10,8 @@ from django.forms import (ModelForm, DateInput, TextInput, Select, BaseModelForm
                           modelformset_factory, Textarea, BooleanField, ValidationError)
 from django.utils.translation import gettext_lazy as _
 
-from django_ledger.models import (ItemModel, PurchaseOrderModel, ItemTransactionModel, EntityUnitModel)
-from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
+from django_ledger.models import (ItemModel, PurchaseOrderModel, ItemTransactionModel, EntityUnitModel, FundModel,)
+from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class PurchaseOrderModelCreateForm(ModelForm):
@@ -104,6 +104,8 @@ class PurchaseOrderItemTransactionForm(ModelForm):
             'po_item_status',
             'create_bill',
         ]
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fields.insert(4, 'fund')    # after entity_unit
         widgets = {
             'item_model': Select(attrs={
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
@@ -121,6 +123,10 @@ class PurchaseOrderItemTransactionForm(ModelForm):
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
             })
         }
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            widgets['fund'] = Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
+            })
 
     def clean(self):
         cleaned_data = super(PurchaseOrderItemTransactionForm, self).clean()
@@ -164,14 +170,24 @@ class BasePurchaseOrderItemFormset(BaseModelFormSet):
             user_model=self.USER_MODEL
         )
 
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fund_qs = FundModel.objects.for_entity(
+                entity_slug=self.ENTITY_SLUG,
+                user_model=self.USER_MODEL
+            )
+
         for form in self.forms:
             form.PO_MODEL = self.PO_MODEL
             form.fields['item_model'].queryset = items_qs
             form.fields['entity_unit'].queryset = unit_qs
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                form.fields['fund'].queryset = fund_qs
             if not self.PO_MODEL.can_edit_items():
                 form.fields['po_unit_cost'].disabled = True
                 form.fields['po_quantity'].disabled = True
                 form.fields['entity_unit'].disabled = True
+                if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                    form.fields['fund'].disabled = True
                 form.fields['item_model'].disabled = True
                 if not self.PO_MODEL.is_approved() or self.PO_MODEL.is_fulfilled():
                     form.fields['po_item_status'].disabled = True

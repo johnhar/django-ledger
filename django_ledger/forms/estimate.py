@@ -10,9 +10,9 @@ from django import forms
 from django.forms import ModelForm, Select, TextInput, BaseModelFormSet, modelformset_factory, Textarea
 from django.utils.translation import gettext_lazy as _
 
-from django_ledger.models import CustomerModel, ItemTransactionModel, ItemModel, EntityUnitModel
+from django_ledger.models import CustomerModel, ItemTransactionModel, ItemModel, EntityUnitModel, FundModel
 from django_ledger.models.estimate import EstimateModel
-from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
+from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class EstimateModelCreateForm(forms.ModelForm):
@@ -88,6 +88,9 @@ class EstimateItemModelForm(ModelForm):
             'ce_unit_cost_estimate',
             'ce_unit_revenue_estimate',
         ]
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fields.insert(2, 'fund')
+
         widgets = {
             'item_model': Select(attrs={
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
@@ -105,6 +108,10 @@ class EstimateItemModelForm(ModelForm):
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
             })
         }
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            widgets['fund'] = Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
+            })
 
 
 class BaseEstimateItemModelFormset(BaseModelFormSet):
@@ -125,9 +132,17 @@ class BaseEstimateItemModelFormset(BaseModelFormSet):
             user_model=self.USER_MODEL
         )
 
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fund_qs = FundModel.objects.for_entity(
+                entity_slug=self.ENTITY_SLUG,
+                user_model=self.USER_MODEL
+            )
+
         for form in self.forms:
             form.fields['item_model'].queryset = items_qs
             form.fields['entity_unit'].queryset = unit_qs
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                form.fields['fund'].queryset = fund_qs
 
             if not self.ESTIMATE_MODEL.can_update_items():
                 form.fields['item_model'].disabled = True
@@ -135,6 +150,8 @@ class BaseEstimateItemModelFormset(BaseModelFormSet):
                 form.fields['ce_quantity'].disabled = True
                 form.fields['ce_unit_revenue_estimate'].disabled = True
                 form.fields['entity_unit'].disabled = True
+                if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                    form.fields['fund'].disabled = True
 
 
 CanEditEstimateItemModelFormset = modelformset_factory(
