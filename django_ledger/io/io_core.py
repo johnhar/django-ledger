@@ -581,14 +581,14 @@ class IODatabaseMixIn:
 
         This method determines the type of the current model instance and retrieves
         the corresponding entity model if applicable. If the instance itself is an
-        EntityModel, it returns itself. If the instance is a ledgerModel or EntityUnitModel
-        model, the associated entity model is retrieved from its attributes.
+        EntityModel, it returns itself. If the instance is a ledgerModel, EntityUnitModel
+        or FundModel model, the associated entity model is retrieved from its attributes.
 
         Returns
         -------
         entity : EntityModel
-            Retrieves the associated entity model if the instance is a ledger
-            or entity unit model.
+            Retrieves the associated entity model if the instance is a ledger,
+            entity unit, or fund model.
         """
         if self.is_entity_model():
             return self
@@ -659,7 +659,7 @@ class IODatabaseMixIn:
         """
         Aggregates transaction data based on the provided parameters to generate a
         digest of financial entries. This method is designed to work with various
-        models (EntityModel, EntityUnitModel, LedgerModel) and processes
+        models (EntityModel, EntityUnitModel, FundModel, LedgerModel) and processes
         transactions, including handling closing entries to optimize database
         queries. The resulting data can be customized based on specific filters
         or aggregation criteria, such as activity, transaction type, or time periods.

@@ -80,8 +80,17 @@ class IODigestContextManager:
             lazy_loader.get_entity_unit_model()
         )
 
+    def is_fund_model(self) -> bool:
+        return isinstance(
+            self.IO_MODEL,
+            lazy_loader.get_fund_model()
+        )
+
     def is_by_unit(self) -> bool:
         return self.IO_DATA['by_unit']
+
+    def is_by_fund(self) -> bool:
+        return self.IO_DATA['by_fund']
 
     def is_by_period(self) -> bool:
         return self.IO_DATA['by_period']

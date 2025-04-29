@@ -161,16 +161,7 @@ class EntityDataGenerator(LoggingMixIn):
         self.create_vendors()
         self.create_customers()
         self.create_entity_units()
-        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-            if self.entity_model.is_fund_enabled():
-                if self.entity_model.fundmodel_set.count():
-                    self.fund_models = self.entity_model.fundmodel_set.all()
-                else:
-                    self.create_funds()
-            else:
-                self.fund_models = None
-        else:
-            self.fund_models = None
+        self.create_funds()
 
         self.create_bank_accounts()
         self.create_uom_models()
@@ -244,6 +235,19 @@ class EntityDataGenerator(LoggingMixIn):
         self.entity_unit_models = self.entity_model.entityunitmodel_set.all()
 
     def create_funds(self, nb_funds: int = None):
+        self.fund_models = None     # default
+        if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            return
+
+        if not self.entity_model.is_fund_enabled():
+            self.logger.info("Entity is not a fund-enabled entity, so no new funds will be created...")
+            return
+
+        if self.entity_model.fundmodel_set.count():
+            self.logger.info("Using default funds as requested instead of creating new ones...")
+            self.fund_models = self.entity_model.fundmodel_set.all()
+            return
+
         self.logger.info(f'Creating funds...')
         nb_funds = self.NB_FUNDS if not nb_funds else nb_funds
 

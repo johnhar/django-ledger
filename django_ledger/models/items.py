@@ -758,6 +758,7 @@ class ItemModelAbstract(CreateUpdateMixIn):
             LOOKUP = {
                 'entity_model_id': self.entity_id,
                 'entity_unit_id': None,
+                'fund_id': None,
                 'fiscal_year': None,
                 'key': EntityStateModel.KEY_ITEM,
                 'sequence': 1
