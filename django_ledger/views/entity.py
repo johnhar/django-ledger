@@ -103,8 +103,6 @@ class EntityModelCreateView(DjangoLedgerSecurityMixIn, EntityModelModelViewQuery
         else:
             funds = None
 
-        # TODO: use these funds in the data generator
-
         if sample_data:
             entity_generator = EntityDataGenerator(
                 entity_model=entity_model,

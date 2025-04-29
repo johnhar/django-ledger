@@ -9,6 +9,7 @@ from django_ledger.models import (
     LedgerModel, JournalEntryModel, EntityModel,
     LedgerModelValidationError
 )
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class JournalEntryModelInLineFormSet(BaseInlineFormSet):
@@ -21,6 +22,8 @@ class JournalEntryModelInLineFormSet(BaseInlineFormSet):
     def add_fields(self, form, index):
         super().add_fields(form=form, index=index)
         form.fields['entity_unit'].queryset = self.entity_model.entityunitmodel_set.all()
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            form.fields['fund'].queryset = self.entity_model.fundmodel_set.all()
 
 
 class JournalEntryModelInLine(TabularInline):
@@ -37,6 +40,8 @@ class JournalEntryModelInLine(TabularInline):
         'view_txs_link',
         'edit_txs_link'
     ]
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        fields.insert(3, 'fund')
     readonly_fields = [
         'posted',
         'locked',

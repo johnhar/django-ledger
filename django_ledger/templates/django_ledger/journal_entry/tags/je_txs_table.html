@@ -9,6 +9,9 @@
                 <th>{% trans 'Account' %}</th>
                 <th>{% trans 'Account Name' %}</th>
                 <th>{% trans 'Unit' %}</th>
+                {% if entity_model.is_fund_enabled %}
+                    <th>{% trans 'Fund' %}</th>
+                {% endif %}
                 <th>{% trans 'Credit' %}</th>
                 <th>{% trans 'Debit' %}</th>
                 <th>{% trans 'Description' %}</th>
@@ -20,6 +23,10 @@
                     <td>{{ transaction_model.account_name }}</td>
                     <td>{% if transaction_model.entity_unit_name %}
                         {{ transaction_model.entity_unit_name }}{% endif %}</td>
+                    {% if entity_model.is_fund_enabled %}
+                        <td>{% if transaction_model.fund_name %}
+                          {{ transaction_model.fund_name }}{% endif %}</td>
+                    {% endif %}
                     <td>{% if transaction_model.is_credit %}$
                         {{ transaction_model.amount | currency_format }}{% endif %}</td>
                     <td>{% if transaction_model.is_debit %}$

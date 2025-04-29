@@ -21,9 +21,6 @@
                         <div class="column is-12">
                             <table class="table is-fullwidth is-narrow is-striped is-bordered">
                                 <tr>
-                                    {% if entity_model.is_fund_enabled %}
-                                        <th>Fund</th>
-                                    {% endif %}
                                     <th>Account</th>
                                     <th>TX Type</th>
                                     <th>Amount</th>
@@ -34,9 +31,6 @@
                                 </tr>
                                 {% for f in txs_formset %}
                                     <tr>
-                                        {% if entity_model.is_fund_enabled %}
-                                            <td>{{ f.fund }}</td>
-                                        {% endif %}
                                         <td>
                                             {% for hidden_field in f.hidden_fields %}
                                                 {{ hidden_field }}

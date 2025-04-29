@@ -25,7 +25,7 @@ from django_ledger.io.io_core import validate_activity, get_localdate
 from django_ledger.models import BillModel, InvoiceModel, JournalEntryModel, EntityModel
 from django_ledger.settings import (
     DJANGO_LEDGER_FINANCIAL_ANALYSIS, DJANGO_LEDGER_CURRENCY_SYMBOL,
-    DJANGO_LEDGER_SPACED_CURRENCY_SYMBOL)
+    DJANGO_LEDGER_SPACED_CURRENCY_SYMBOL, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES)
 from django_ledger.utils import get_default_entity_session_key, get_end_date_from_session
 
 register = template.Library()
@@ -223,13 +223,16 @@ def jes_table(context, journal_entry_qs, next_url=None):
                                'entity_slug': entity_slug,
                                'ledger_pk': ledger_pk
                            })
-    return {
+    result = {
         'journal_entry_qs': journal_entry_qs,
         'entity_slug': entity_slug,
         'ledger_pk': ledger_pk,
         'next_url': next_url
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
 
+    return result
 
 @register.inclusion_tag('django_ledger/transactions/tags/txs_table.html')
 def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceModel], style='detail'):
@@ -251,14 +254,17 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
     total_credits = sum(tx.amount for tx in transaction_model_qs if tx.is_credit())
     total_debits = sum(tx.amount for tx in transaction_model_qs if tx.is_debit())
 
-    return {
+    result = {
         'style': style,
         'transaction_model_qs': transaction_model_qs,
         'total_debits': total_debits,
         'total_credits': total_credits,
         'object': object_type,
-        'is_fund_enabled': is_fund_enabled,
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = is_fund_enabled
+
+    return result
 
 
 @register.inclusion_tag('django_ledger/ledger/tags/ledgers_table.html', takes_context=True)
@@ -840,13 +846,16 @@ def invoice_item_formset_table(context, itemtxs_formset):
 
 @register.inclusion_tag('django_ledger/bills/tags/bill_item_formset.html', takes_context=True)
 def bill_item_formset_table(context, item_formset):
-    return {
+    result = {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'bill_pk': context['view'].kwargs['bill_pk'],
         'total_amount__sum': context['total_amount__sum'],
         'item_formset': item_formset,
-        'is_fund_enabled': context['bill_model'].ledger.entity.is_fund_enabled(),
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = context['bill_model'].ledger.entity.is_fund_enabled()
+
+    return result
 
 
 @register.inclusion_tag('django_ledger/purchase_order/includes/po_item_formset.html', takes_context=True)
@@ -886,26 +895,30 @@ def customer_estimate_table(context, queryset):
 
 @register.inclusion_tag('django_ledger/estimate/includes/estimate_item_table.html', takes_context=True)
 def estimate_item_table(context, queryset):
-    return {
+    result = {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'ce_model': context['estimate_model'],
         'ce_item_list': queryset,
-        'is_fund_enabled': EntityModel.objects.filter(
-            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled(),
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = EntityModel.objects.filter(
+            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
+
+    return result
 
 
 @register.inclusion_tag('django_ledger/purchase_order/tags/po_item_table.html', takes_context=True)
 def po_item_table(context, queryset):
-    return {
+    result = {
         'entity_slug': context['view'].kwargs['entity_slug'],
         'po_model': context['po_model'],
         'po_item_list': queryset,
-        'is_fund_enabled': EntityModel.objects.filter(
-            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled(),
-
     }
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        result['is_fund_enabled'] = EntityModel.objects.filter(
+            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
 
+    return result
 
 @register.inclusion_tag('django_ledger/estimate/tags/ce_item_formset.html', takes_context=True)
 def customer_estimate_item_formset(context, item_formset):

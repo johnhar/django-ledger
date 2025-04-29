@@ -19,7 +19,7 @@ Key Features:
 
 3. **Database Interaction**:
    - Aggregation and querying of financial data at the database layer to improve memory efficiency.
-   - Implements advanced filtering options for transactions based on attributes like activity, account roles, business units, and time periods.
+   - Implements advanced filtering options for transactions based on attributes like activity, account roles, business units, funds, and time periods.
    - Leverages Closing Entries as "checkpoints" to minimize aggregation workload on large datasets.
 
 4. **Financial Statement Reports**:
@@ -120,7 +120,7 @@ from django_ledger.io.io_middleware import (
 )
 from django_ledger.io.ratios import FinancialRatioManager
 from django_ledger.models.utils import lazy_loader
-from django_ledger.settings import DJANGO_LEDGER_PDF_SUPPORT_ENABLED
+from django_ledger.settings import DJANGO_LEDGER_PDF_SUPPORT_ENABLED, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 UserModel = get_user_model()
 
@@ -596,6 +596,8 @@ class IODatabaseMixIn:
             return getattr(self, 'entity')
         elif self.is_entity_unit_model():
             return getattr(self, 'entity')
+        elif self.is_fund_model():
+            return getattr(self, 'fund')
         raise IOValidationError(
             message=_(f'IODatabaseMixIn not compatible with {self.__class__.__name__} model.')
         )
@@ -944,8 +946,8 @@ class IODatabaseMixIn:
             VALUES += ['journal_entry__entity_unit__uuid', 'journal_entry__entity_unit__name']
 
         if by_fund:
-            ORDER_BY.append('fund__uuid')
-            VALUES += ['fund__uuid', 'fund__name']
+            ORDER_BY.append('journal_entry__fund__uuid')
+            VALUES += ['journal_entry__fund__uuid', 'journal_entry__fund__name']
 
         if by_period:
             ORDER_BY.append('journal_entry__timestamp')
@@ -1068,7 +1070,7 @@ class IODatabaseMixIn:
         gb_key = lambda a: (
             a['account__uuid'],
             a.get('journal_entry__entity_unit__uuid') if by_unit else None,
-            a.get('fund__uuid') if by_fund else None,
+            a.get('journal_entry__fund__uuid') if by_fund else None,
             a.get('dt_idx').year if by_period else None,
             a.get('dt_idx').month if by_period else None,
             a.get('journal_entry__activity') if by_activity else None,
@@ -1153,7 +1155,7 @@ class IODatabaseMixIn:
             'unit_uuid': k[1],
             'unit_name': gl[0].get('journal_entry__entity_unit__name'),
             'fund_uuid': k[2],
-            'fund_name': gl[0].get('fund__name'),
+            'fund_name': gl[0].get('journal_entry__fund__name'),
             'activity': gl[0].get('journal_entry__activity'),
             'period_year': k[3],
             'period_month': k[4],
@@ -1279,8 +1281,9 @@ class IODatabaseMixIn:
         io_state['to_date'] = to_date
         io_state['by_unit'] = by_unit
         io_state['unit_slug'] = unit_slug
-        io_state['by_fund'] = by_fund
-        io_state['fund_slug'] = fund_slug
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            io_state['by_fund'] = by_fund
+            io_state['fund_slug'] = fund_slug
         io_state['entity_slug'] = entity_slug
         io_state['by_period'] = by_period
         io_state['by_activity'] = by_activity
@@ -1349,7 +1352,7 @@ class IODatabaseMixIn:
             io_state = ratio_gen.digest()
 
         if process_activity:
-            activity_manager = JEActivityIOMiddleware(io_data=io_state, by_unit=by_unit, by_period=by_period)
+            activity_manager = JEActivityIOMiddleware(io_data=io_state, by_unit=by_unit, by_fund=by_fund, by_period=by_period)
             activity_manager.digest()
 
         if balance_sheet_statement:
@@ -1372,6 +1375,7 @@ class IODatabaseMixIn:
                    je_posted: bool = False,
                    je_ledger_model=None,
                    je_unit_model=None,
+                   je_fund_model=None,
                    je_desc=None,
                    je_origin=None,
                    force_je_retrieval: bool = False,
@@ -1400,6 +1404,9 @@ class IODatabaseMixIn:
             If not provided, defaults to the current ledger model.
         je_unit_model : object, optional
             An optional instance of EntityUnitModel used for validating entity unit
+            associations with transactions.
+        je_fund_model : object, optional
+            An optional instance of FundModel used for validating fund
             associations with transactions.
         je_desc : str, optional
             A description for the journal entry. Defaults to None if not provided.
@@ -1477,6 +1484,14 @@ class IODatabaseMixIn:
             if je_unit_model.entity_id != self.uuid:
                 raise IOValidationError(f'EntityUnitModel {je_unit_model} does not belong to {self}')
 
+        # Validates that the provided FundModel id valid...
+        if all([
+            isinstance(self, lazy_loader.get_entity_model()),
+            je_fund_model is not None,
+        ]):
+            if je_fund_model.entity_id != self.uuid:
+                raise IOValidationError(f'FundModel {je_fund_model} does not belong to {self}')
+
         if not je_ledger_model:
             je_ledger_model = self
 
@@ -1496,6 +1511,7 @@ class IODatabaseMixIn:
             je_model = JournalEntryModel(
                 ledger=je_ledger_model,
                 entity_unit=je_unit_model,
+                fund=je_fund_model,
                 description=je_desc,
                 timestamp=je_timestamp,
                 origin=je_origin,

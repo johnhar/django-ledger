@@ -26,6 +26,8 @@ from typing import Union, Optional
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
+
 from django_ledger.io.io_core import get_localtime, get_localdate
 from django_ledger.io.roles import (INCOME_OPERATIONAL, ASSET_CA_INVENTORY, COGS, ASSET_CA_CASH, ASSET_CA_PREPAID,
                                     LIABILITY_CL_DEFERRED_REVENUE, EXPENSE_OPERATIONAL, EQUITY_CAPITAL,
@@ -122,6 +124,10 @@ class EntityDataGenerator(LoggingMixIn):
         self.account_models = None
         self.accounts_by_role = None
 
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            self.fund_models = None
+            self.NB_FUNDS = 3
+
         self.COUNTRY = 'US'
         self.NB_UNITS: int = 4
 
@@ -155,6 +161,17 @@ class EntityDataGenerator(LoggingMixIn):
         self.create_vendors()
         self.create_customers()
         self.create_entity_units()
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            if self.entity_model.is_fund_enabled():
+                if self.entity_model.fundmodel_set.count():
+                    self.fund_models = self.entity_model.fundmodel_set.all()
+                else:
+                    self.create_funds()
+            else:
+                self.fund_models = None
+        else:
+            self.fund_models = None
+
         self.create_bank_accounts()
         self.create_uom_models()
 
@@ -210,7 +227,7 @@ class EntityDataGenerator(LoggingMixIn):
         nb_units = self.NB_UNITS if not nb_units else nb_units
 
         if nb_units:
-            assert nb_units >= 0, 'Number of unite must be greater than 0'
+            assert nb_units >= 0, 'Number of units must be greater than 0'
 
         entity_unit_models = [
             EntityUnitModel(
@@ -225,6 +242,27 @@ class EntityDataGenerator(LoggingMixIn):
             EntityUnitModel.add_root(instance=unit)
 
         self.entity_unit_models = self.entity_model.entityunitmodel_set.all()
+
+    def create_funds(self, nb_funds: int = None):
+        self.logger.info(f'Creating funds...')
+        nb_funds = self.NB_FUNDS if not nb_funds else nb_funds
+
+        if nb_funds:
+            assert nb_funds >= 0, 'Number of funds must be greater than 0'
+
+        fund_models = [
+            FundModel(
+                name=f'Fund {f}',
+                entity=self.entity_model,
+                document_prefix=''.join(choices(ascii_uppercase, k=3))
+            ) for f in range(nb_funds)
+        ]
+
+        for fund in fund_models:
+            fund.clean()
+            FundModel.add_root(instance=fund)
+
+        self.fund_models = self.entity_model.fundmodel_set.all()
 
     def create_vendors(self):
         self.logger.info('Creating vendors...')
@@ -473,9 +511,6 @@ class EntityDataGenerator(LoggingMixIn):
         )
         self.logger.info(f'Creating entity estimate {estimate_model.estimate_number}...')
 
-        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
-            self.entity_model.is_fund_enabled() else None
-
         estimate_items = [
             ItemTransactionModel(
                 ce_model=estimate_model,
@@ -484,7 +519,7 @@ class EntityDataGenerator(LoggingMixIn):
                 ce_unit_cost_estimate=round(random() * randint(50, 100), 2),
                 ce_unit_revenue_estimate=round(random() * randint(80, 120) * (1 + 0.2 * random()), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund=fund,
+                fund=choice(self.fund_models) if self.fund_models else None,
             ) for _ in range(randint(1, 10))
         ]
 
@@ -527,9 +562,6 @@ class EntityDataGenerator(LoggingMixIn):
 
         self.logger.info(f'Creating entity bill {bill_model.bill_number}...')
 
-        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
-            self.entity_model.is_fund_enabled() else None
-
         bill_items = [
             ItemTransactionModel(
                 bill_model=bill_model,
@@ -537,7 +569,7 @@ class EntityDataGenerator(LoggingMixIn):
                 quantity=round(random() * randint(5, 15), 2),
                 unit_cost=round(random() * randint(50, 100), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund=fund,
+                fund=choice(self.fund_models) if self.fund_models else None,
             ) for _ in range(randint(1, 10))
         ]
 
@@ -583,9 +615,6 @@ class EntityDataGenerator(LoggingMixIn):
     def create_po(self, date_draft: date):
 
         po_model = self.entity_model.create_purchase_order(date_draft=date_draft)
-        fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
-            self.entity_model.is_fund_enabled() else None
-
         po_items = [
             ItemTransactionModel(
                 po_model=po_model,
@@ -593,7 +622,7 @@ class EntityDataGenerator(LoggingMixIn):
                 po_quantity=round(random() * randint(3, 10) + 3, 2),
                 po_unit_cost=round(random() * randint(100, 800), 2),
                 entity_unit=choice(self.entity_unit_models) if random() > .75 else None,
-                fund=fund,
+                fund=choice(self.fund_models) if self.fund_models else None,
             ) for _ in range(randint(1, 10))
         ]
 
@@ -714,8 +743,7 @@ class EntityDataGenerator(LoggingMixIn):
             item_model: ItemModel = choice(self.product_models)
             quantity = Decimal.from_float(round(random() * randint(1, 2), 2))
             entity_unit = choice(self.entity_unit_models) if random() > .75 else None
-            fund = choice(FundModel.objects.for_entity(self.entity_model, user_model=self.user_model)) if \
-                self.entity_model.is_fund_enabled() else None
+            fund = choice(self.fund_models) if self.fund_models else None
             margin = Decimal(random() + 3.5)
             avg_cost = item_model.get_average_cost()
             if item_model.is_product():
@@ -804,6 +832,7 @@ class EntityDataGenerator(LoggingMixIn):
             amount=self.capital_contribution,
             je_timestamp=self.start_date,
             je_posted=True,
+            je_fund_model=choice(self.fund_models),
             ledger_posted=True,
             description='Entity Funding for Sample Data',
         )

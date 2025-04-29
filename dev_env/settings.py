@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 
+# Add custom Django Ledger settings BEFORE importing django_ledger.settings. Otherwise, environment variables are not
+# picked up, and Django Ledger uses default settings.
+DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES = os.getenv('DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES', 'False').lower() == 'true'
+
 from django_ledger.settings import DJANGO_LEDGER_GRAPHQL_SUPPORT_ENABLED
 
 BASE_DIR = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -158,8 +162,6 @@ CACHES = {
 # }
 
 
-# Add the custom setting
-DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES = os.getenv('DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES', 'False').lower() == 'true'
 
 
 # django-debug-toolbar needs to know on which IPs we should be showing the toolbar

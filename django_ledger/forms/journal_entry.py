@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ledger.models import EntityModel
 from django_ledger.models.journal_entry import JournalEntryModel
 from django_ledger.models.ledger import LedgerModel
-from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
+from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class JournalEntryModelCreateForm(ModelForm):
@@ -31,6 +31,9 @@ class JournalEntryModelCreateForm(ModelForm):
             self.fields['timestamp'].required = False
         if 'entity_unit' in self.fields:
             self.fields['entity_unit'].queryset = self.ENTITY_MODEL.entityunitmodel_set.all()
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            if 'fund' in self.fields and entity_model.is_fund_enabled():
+                self.fields['fund'].queryset = self.ENTITY_MODEL.fundmodel_set.all()
 
     def clean(self):
         if self.LEDGER_MODEL.is_locked():
@@ -63,6 +66,13 @@ class JournalEntryModelCreateForm(ModelForm):
         labels = {
             'entity_unit': _('Entity Unit')
         }
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fields.insert(2, 'fund')    # order it after entity unit
+            widgets['fund'] = Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES
+            })
+            labels['fund'] = _('Fund')
+
 
 
 class JournalEntryModelUpdateForm(ModelForm):
@@ -84,6 +94,8 @@ class JournalEntryModelUpdateForm(ModelForm):
             'entity_unit',
             'description'
         ]
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fields.insert(2, 'fund')    # insert after entity_unit
 
 
 class JournalEntryModelCannotEditForm(JournalEntryModelUpdateForm):

@@ -26,6 +26,7 @@ from markdown import markdown
 from django_ledger.io import ASSET_CA_CASH, LIABILITY_CL_ST_NOTES_PAYABLE, LIABILITY_LTL_MORTGAGE_PAYABLE
 from django_ledger.io.io_core import validate_io_timestamp, check_tx_balance, get_localtime, get_localdate
 from django_ledger.models.utils import lazy_loader
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
@@ -600,7 +601,7 @@ class AccrualMixIn(models.Model):
                 process_ratios=False,
                 signs=False,
                 by_unit=True,
-                by_fund=True,
+                by_fund=True if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False,
             )
 
             io_data = io_digest.get_io_data()
@@ -618,6 +619,8 @@ class AccrualMixIn(models.Model):
             cogs_adjustment = defaultdict(lambda: Decimal('0.00'))
             inventory_adjustment = defaultdict(lambda: Decimal('0.00'))
             progress = self.get_progress()
+
+# TODO JJH check if we need to add support for POs and estimates here
 
             if isinstance(self, lazy_loader.get_bill_model()):
 
@@ -773,6 +776,7 @@ class AccrualMixIn(models.Model):
                 je_list = {
                     (u, f): JournalEntryModel(
                         entity_unit_id=u,
+                        fund_id=f,
                         timestamp=now_timestamp,
                         description=self.get_migrate_state_desc(),
                         origin='migration',
@@ -788,7 +792,6 @@ class AccrualMixIn(models.Model):
                         journal_entry=je_list.get((unit_uuid, fund_uuid)),
                         amount=abs(round(amt, 2)),
                         tx_type=self.get_tx_type(acc_bal_type=bal_type, adjustment_amount=amt),
-                        fund_id=fund_uuid,
                         account_id=acc_uuid,
                         description=self.get_migrate_state_desc()
                     )) for (acc_uuid, unit_uuid, fund_uuid, bal_type), amt in diff_idx.items() if amt

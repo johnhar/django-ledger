@@ -55,7 +55,8 @@ from django_ledger.models.mixins import CreateUpdateMixIn, SlugNameMixIn, Contac
 from django_ledger.models.unit import EntityUnitModel
 from django_ledger.models.utils import lazy_loader
 from django_ledger.models.vendor import VendorModelQuerySet, VendorModel
-from django_ledger.settings import DJANGO_LEDGER_DEFAULT_CLOSING_ENTRY_CACHE_TIMEOUT
+from django_ledger.settings import DJANGO_LEDGER_DEFAULT_CLOSING_ENTRY_CACHE_TIMEOUT, \
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 UserModel = get_user_model()
 
@@ -470,7 +471,7 @@ class EntityModelClosingEntryMixIn:
             to_date=to_date,
             from_date=from_date,
             by_unit=True,
-            by_fund=True,
+            by_fund=True if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False,
             by_activity=True,
             signs=False,
             **kwargs
@@ -1170,7 +1171,7 @@ class EntityModelAbstract(MP_Node,
 
     # Nonprofit methods
     def is_fund_enabled(self):
-        return self.is_nonprofit
+        return self.is_nonprofit if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
@@ -2688,7 +2689,8 @@ class EntityModelAbstract(MP_Node,
                         ledger_model: Optional[Union[LedgerModel, UUID]] = None,
                         ledger_posted: bool = False,
                         je_timestamp: Optional[Union[datetime, date, str]] = None,
-                        je_posted: bool = False):
+                        je_posted: bool = False,
+                        je_fund_model: Optional[Union[FundModel, UUID]] = None,):
 
         if coa_model:
             self.validate_chart_of_accounts_for_entity(coa_model)
@@ -2761,7 +2763,8 @@ class EntityModelAbstract(MP_Node,
             je_timestamp=je_timestamp,
             je_txs=txs,
             je_posted=je_posted,
-            je_ledger_model=ledger_model
+            je_ledger_model=ledger_model,
+            je_fund_model=je_fund_model
         )
 
         return ledger_model
@@ -3198,6 +3201,11 @@ class EntityStateModelAbstract(Model):
                                     verbose_name=_('Entity Unit'),
                                     blank=True,
                                     null=True)
+    fund = models.ForeignKey('django_ledger.FundModel',
+                                    on_delete=models.RESTRICT,
+                                    verbose_name=_('Fund'),
+                                    blank=True,
+                                    null=True)
     fiscal_year = models.SmallIntegerField(
         verbose_name=_('Fiscal Year'),
         validators=[MinValueValidator(limit_value=1900)],
@@ -3216,11 +3224,12 @@ class EntityStateModelAbstract(Model):
                     'entity_model',
                     'fiscal_year',
                     'entity_unit',
+                    'fund',
                     'key'
                 ])
         ]
         unique_together = [
-            ('entity_model', 'entity_unit', 'fiscal_year', 'key')
+            ('entity_model', 'entity_unit', 'fund', 'fiscal_year', 'key')
         ]
 
     def __str__(self):

@@ -10,6 +10,7 @@ from itertools import groupby, chain
 
 from django.core.exceptions import ValidationError
 
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 from django_ledger.io import roles as roles_module
 from django_ledger.models.utils import lazy_loader
 
@@ -25,7 +26,7 @@ class AccountRoleIOMiddleware:
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
-        self.BY_FUND = by_fund
+        self.BY_FUND = by_fund if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
         self.DIGEST = io_data
         self.DIGEST['role_account'] = None
@@ -117,7 +118,7 @@ class AccountGroupIOMiddleware:
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
-        self.BY_FUND = by_fund
+        self.BY_FUND = by_fund if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
         self.IO_DIGEST = io_data
 
@@ -216,7 +217,7 @@ class JEActivityIOMiddleware:
 
         self.BY_PERIOD = by_period
         self.BY_UNIT = by_unit
-        self.BY_FUND = by_fund
+        self.BY_FUND = by_fund if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
         self.ACCOUNTS = io_data['accounts']
         self.ACTIVITY_ACCOUNTS = dict()

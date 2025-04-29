@@ -17,6 +17,11 @@ segregate the different financial statements into different business operations 
 Examples of EntityModelUnits are offices, departments, divisions, etc. *The user may request financial statements by
 unit*.
 
+The JournalEntryModel also carries an optional FundModel if non-profit mode is enabled, which are logical user-defined
+labels which help segregate the different financial statements into different funds (see FundModel for documentation).
+Examples of Funds are General, Building, Project X, etc. *The user may request financial statements by
+fund*.
+
 All JEs automatically generate a sequential Journal Entry Number, which takes into consideration the Fiscal Year of the
 JournalEntryModel instance. This functionality enables a human-readable tracking mechanism which helps with audits. It
 is also searchable and indexed to support quick searches and queries.
@@ -63,7 +68,9 @@ from django_ledger.models.transactions import TransactionModelQuerySet, Transact
 from django_ledger.settings import (
     DJANGO_LEDGER_JE_NUMBER_PREFIX,
     DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING,
-    DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX
+    DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX,
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
+    DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
 )
 from django_ledger.io import roles
 
@@ -316,6 +323,9 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
     entity_unit : EntityUnitModel
         A reference to a logical and self-contained structure within the `EntityModel`.
         Provides context for the journal entry. See `EntityUnitModel` documentation for details.
+    fund : FundModel
+        A reference to a logical and self-contained structure within the `EntityModel`.
+        Provides context for the journal entry. See `FundModel` documentation for details.
     activity : str
         Indicates the nature of the activity associated with the journal entry.
         Must be one of the predefined `ACTIVITIES` (e.g., Operating, Financing, Investing) and is programmatically determined.
@@ -379,6 +389,13 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         null=True,
         verbose_name=_('Associated Entity Unit')
     )
+    fund = models.ForeignKey(
+        'django_ledger.FundModel',
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        verbose_name=_('Associated Fund')
+    )
     activity = models.CharField(
         choices=ACTIVITIES,
         max_length=20,
@@ -411,6 +428,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             models.Index(fields=['timestamp']),
             models.Index(fields=['activity']),
             models.Index(fields=['entity_unit']),
+            models.Index(fields=['fund']),
             models.Index(fields=['locked']),
             models.Index(fields=['posted']),
             models.Index(fields=['je_number']),
@@ -770,6 +788,23 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         if self.entity_unit_id:
             return self.entity_unit.name
         return no_unit_name
+
+    def get_fund_name(self, no_fund_name: str = "") -> str:
+        """
+        Retrieves the name of the fund associated with the Journal Entry.
+
+        Parameters:
+            no_fund_name (str): The fallback name to return if no fund is associated.
+
+        Returns:
+            str: The name of the fund, or the fallback provided.
+        """
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            if self.fund_id:
+                return self.fund.name
+            return no_fund_name
+        else:
+            raise EnvironmentError(f'Nonprofit features are not enabled. Please enable them before calling this method.')
 
     def get_entity_last_closing_date(self) -> Optional[date]:
         """
@@ -1275,6 +1310,8 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_JOURNAL_ENTRY
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id__exact'] = self.fund_id
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1292,6 +1329,9 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 'key': EntityStateModel.KEY_JOURNAL_ENTRY,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = self.fund_id
+
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
 
@@ -1335,13 +1375,16 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 while not state_model:
                     state_model = self._get_next_state_model(raise_exception=False)
 
-                if self.entity_unit_id:
-                    unit_prefix = self.entity_unit.document_prefix
-                else:
-                    unit_prefix = DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX
+                unit_prefix = self.entity_unit.document_prefix if self.entity_unit_id else DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX
+
+                if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                    fund_prefix = self.fund.document_prefix if self.fund_id else DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
 
                 seq = str(state_model.sequence).zfill(DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING)
-                self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
+                if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                    self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
+                else:
+                    self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{fund_prefix}-{seq}'
 
                 if commit:
                     self.save(update_fields=['je_number'])

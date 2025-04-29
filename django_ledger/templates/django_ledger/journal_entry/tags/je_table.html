@@ -12,6 +12,9 @@
             <th>{% trans 'Posted' %}</th>
             <th>{% trans 'Locked' %}</th>
             <th>{% trans 'Unit' %}</th>
+            {% if is_fund_enabled %}
+            <th>{% trans 'Fund' %}</th>
+            {% endif %}
             <th>{% trans 'Txs Count' %}</th>
             <th>{% trans 'Actions' %}</th>
         </tr>
@@ -42,6 +45,9 @@
                     {% endif %}
                 </td>
                 <td>{{ journal_entry_model.get_entity_unit_name }}</td>
+                {% if is_fund_enabled %}
+                  <td>{{ journal_entry_model.get_fund_name }}</td>
+                {% endif %}
                 <td class="has-text-weight-bold">{{ journal_entry_model.txs_count }}</td>
                 <td>
                     <div class="dropdown is-right is-hoverable"

@@ -11,7 +11,7 @@ from django_ledger.admin.chart_of_accounts import ChartOfAccountsInLine
 from django_ledger.io.io_core import get_localtime
 from django_ledger.models import EntityUnitModel, FundModel
 from django_ledger.models.entity import EntityModel, EntityManagementModel
-
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 class EntityManagementInLine(TabularInline):
     model = EntityManagementModel
@@ -136,9 +136,11 @@ class EntityModelAdmin(ModelAdmin):
     inlines = [
         ChartOfAccountsInLine,
         EntityUnitModelInLine,
-        FundModelInLine,
         EntityManagementInLine
     ]
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        inlines.insert(2, FundModelInLine)      # place after entity unit
+
     actions = [
         'add_code_of_accounts',
         'populate_random_data'

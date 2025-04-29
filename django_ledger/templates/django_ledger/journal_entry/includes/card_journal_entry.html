@@ -12,6 +12,12 @@
             <h2 class="is-size-2 has-text-weight-light">{{ journal_entry.entity_unit.name }}</h2>
         {% endif %}
 
+        {% if journal_entry.ledger.entity.is_fund_enabled %}
+          {% if journal_entry.fund %}
+            <h2 class="is-size-2 has-text-weight-light">{{ journal_entry.fund.name }}</h2>
+          {% endif %}
+        {% endif %}
+
         <h2 class="is-size-2">{% trans 'Date' %}: {{ journal_entry.timestamp | date }}</h2>
 
 
