@@ -9,6 +9,9 @@
             <th>Amount</th>
             <th>Activity</th>
             <th>Entity Unit</th>
+            {% if is_fund_enabled %}
+              <th>Fund</th>
+            {% endif %}
             <th>Map To</th>
             <th>TX</th>
             <th>Actions</th>
@@ -25,6 +28,9 @@
                     {{ imported_tx.get_activity_display }}
                 {% endif %}</td>
                 <td>{% if imported_tx.entity_unit %}{{ imported_tx.entity_unit }}{% endif %}</td>
+                {% if is_fund_enabled %}
+                  <td>{% if imported_tx.fund %}{{ imported_tx.fund }}{% endif %}</td>
+                {% endif %}
                 <td>{{ imported_tx.account_model }}</td>
                 <td>{{ imported_tx.transaction_model }}</td>
                 <td class="has-text-centered">

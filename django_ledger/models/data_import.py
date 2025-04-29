@@ -26,6 +26,7 @@ from django_ledger.io import ASSET_CA_CASH, CREDIT, DEBIT
 from django_ledger.models import JournalEntryModel
 from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.utils import lazy_loader
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class ImportJobModelValidationError(ValidationError):
@@ -370,6 +371,7 @@ class StagedTransactionModelManager(Manager):
         return qs.select_related(
             'account_model',
             'unit_model',
+            'fund_model',
             'transaction_model',
             'transaction_model__journal_entry',
             'transaction_model__account',
@@ -381,9 +383,11 @@ class StagedTransactionModelManager(Manager):
             'parent',
             'parent__account_model',
             'parent__unit_model',
+            'parent__fund_model',
         ).annotate(
             entity_slug=F('import_job__bank_account_model__entity_model__slug'),
             entity_unit=F('transaction_model__journal_entry__entity_unit__name'),
+            fund=F('transaction_model__journal_entry__fund__name'),
             children_count=Count('split_transaction_set'),
             children_mapped_count=Count('split_transaction_set__account_model_id'),
             total_amount_split=Coalesce(
@@ -522,6 +526,12 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
                                    blank=True,
                                    verbose_name=_('Entity Unit Model'))
 
+    fund_model = models.ForeignKey('django_ledger.FundModel',
+                                   on_delete=models.RESTRICT,
+                                   null=True,
+                                   blank=True,
+                                   verbose_name=_('Fund Model'))
+
     transaction_model = models.OneToOneField('django_ledger.TransactionModel',
                                              on_delete=models.SET_NULL,
                                              null=True,
@@ -602,13 +612,15 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             children_qs = self.split_transaction_set.all().prefetch_related(
                 'split_transaction_set',
                 'split_transaction_set__account_model',
-                'split_transaction_set__unit_model'
+                'split_transaction_set__unit_model',
+                'split_transaction_set__fund_model',
             )
             return [{
                 'account': child_txs_model.account_model,
                 'amount': abs(child_txs_model.amount_split),
                 'amount_staged': child_txs_model.amount_split,
                 'unit_model': child_txs_model.unit_model,
+                'fund_model': child_txs_model.fund_model,
                 'tx_type': CREDIT if not child_txs_model.amount_split < 0.00 else DEBIT,
                 'description': child_txs_model.name,
                 'staged_tx_model': child_txs_model
@@ -618,6 +630,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             'amount': abs(self.amount),
             'amount_staged': self.amount,
             'unit_model': self.unit_model,
+            'fund_model': self.fund_model,
             'tx_type': CREDIT if not self.amount < 0.00 else DEBIT,
             'description': self.name,
             'staged_tx_model': self
@@ -842,6 +855,48 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             return True
 
         return False
+
+    def can_have_fund(self) -> bool:
+        """
+        Check if the entity can have a fund.
+
+        This method evaluates the conditions under which an entity may have a
+        fund assigned. It considers several factors including the state of
+        the entity, whether it has children, if all children are mapped, and
+        its relationship to its parent entity.
+
+        Returns
+        -------
+        bool
+            A boolean value indicating whether the entity can have a fund.
+            Returns `True` if the conditions are satisfied, otherwise `False`.
+        """
+        if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            return False
+
+        if self._state.adding:
+            return False
+
+        # no children...
+        if self.is_single():
+            return True
+
+        if all([
+            self.has_children(),
+            self.has_activity(),
+            self.are_all_children_mapped(),
+            self.bundle_split is True
+        ]):
+            return True
+
+        if all([
+            self.is_children(),
+            self.parent.bundle_split is False if self.parent_id else False
+        ]):
+            return True
+
+        return False
+
 
     def can_have_account(self) -> bool:
         """
@@ -1141,9 +1196,11 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             if len(commit_dict) > 0:
                 for je_data in commit_dict:
                     unit_model = self.unit_model if not split_txs else commit_dict[0][1]['unit_model']
+                    fund_model = self.fund_model if not split_txs else commit_dict[0][1]['fund_model']
                     _, _ = ledger_model.commit_txs(
                         je_timestamp=self.date_posted,
                         je_unit_model=unit_model,
+                        je_fund_model=fund_model,
                         je_txs=je_data,
                         je_desc=self.memo,
                         je_posted=False,
@@ -1165,6 +1222,10 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         if not self.can_have_unit():
             if self.parent_id:
                 self.unit_model = self.parent.unit_model
+
+        if not self.can_have_fund():
+            if self.parent_id:
+                self.fund_model = self.parent.fund_model
 
         if verify:
             self.is_role_mapping_valid(raise_exception=True)

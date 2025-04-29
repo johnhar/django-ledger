@@ -203,7 +203,7 @@ class DataImportJobDetailView(ImportJobModelViewBaseView, DetailView):
                     # import entry was selected for import...
                     is_import = tx_form.cleaned_data['tx_import']
                     if is_import:
-                        # all entries in split will be going so the same journal entry... (same unit...)
+                        # all entries in split will be going so the same journal entry... (same unit and fund...)
                         is_bundled = tx_form.cleaned_data['bundle_split']
                         tx_form.instance.migrate() if is_bundled else tx_form.instance.migrate(split_txs=True)
 

@@ -200,7 +200,8 @@ def data_import_job_txs_pending(context, staged_txs_formset):
     return {
         'entity_slug': staged_txs_formset.IMPORT_JOB_MODEL.entity_slug,
         'import_job_model': staged_txs_formset.IMPORT_JOB_MODEL,
-        'staged_txs_formset': staged_txs_formset
+        'staged_txs_formset': staged_txs_formset,
+        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
     }
 
 
@@ -209,7 +210,8 @@ def data_import_job_txs_imported(context, import_job_model):
     return {
         'entity_slug': import_job_model.entity_slug,
         'import_job_model': import_job_model,
-        'imported_txs': import_job_model.stagedtransactionmodel_set.all().is_imported()
+        'imported_txs': import_job_model.stagedtransactionmodel_set.all().is_imported(),
+        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
     }
 
 

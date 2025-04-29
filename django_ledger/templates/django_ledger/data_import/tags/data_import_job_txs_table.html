@@ -23,6 +23,9 @@
                 <th>Split Amount</th>
                 <th>Map To</th>
                 <th>Unit</th>
+                {% if is_fund_enabled %}
+                  <th>Fund</th>
+                {% endif %}
                 <th>Import</th>
                 <th>Bundle Split</th>
                 <th>Add Split</th>
@@ -65,6 +68,12 @@
                         <span class="content is-small">{{ txf.instance.unit_model.name }}</span>
                     {% endif %}
                     </td>
+                    {% if is_fund_enabled %}
+                      <td>{{ txf.fund_model }}{% if txf.instance.is_children %}
+                        <span class="content is-small">{{ txf.instance.fund_model.name }}</span>
+                      {% endif %}
+                      </td>
+                    {% endif %}
                     <td class="has-text-centered">{{ txf.tx_import }}</td>
                     <td class="has-text-centered">{{ txf.bundle_split }}</td>
                     <td class="has-text-centered">{{ txf.tx_split }}</td>

@@ -11,7 +11,7 @@ from django_ledger.models import (
     ImportJobModel,
     EntityModel
 )
-from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
+from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class ImportJobModelCreateForm(ModelForm):
@@ -78,8 +78,8 @@ class StagedTransactionModelForm(ModelForm):
 
         # avoids multiple DB queries rendering the formset...
         self.fields['unit_model'].choices = self.BASE_FORMSET_INSTANCE.UNIT_MODEL_CHOICES
-
-        # avoids multiple DB queries rendering the formset...
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            self.fields['fund_model'].choices = self.BASE_FORMSET_INSTANCE.FUND_MODEL_CHOICES
         self.fields['account_model'].choices = self.BASE_FORMSET_INSTANCE.ACCOUNT_MODEL_CHOICES
 
         if instance:
@@ -97,6 +97,10 @@ class StagedTransactionModelForm(ModelForm):
             if not instance.can_have_unit():
                 self.fields['unit_model'].widget = HiddenInput()
                 self.fields['unit_model'].disabled = True
+
+            if not instance.can_have_fund():
+                self.fields['fund_model'].widget = HiddenInput()
+                self.fields['fund_model'].disabled = True
 
             if not instance.can_import():
                 self.fields['tx_import'].widget = HiddenInput()
@@ -117,6 +121,13 @@ class StagedTransactionModelForm(ModelForm):
             if staged_txs_model.parent_id:
                 return staged_txs_model.parent.unit_model
         return self.cleaned_data['unit_model']
+
+    def clean_fund_model(self):
+        staged_txs_model: StagedTransactionModel = self.instance
+        if not staged_txs_model.can_have_fund():
+            if staged_txs_model.parent_id:
+                return staged_txs_model.parent.fund_model
+        return self.cleaned_data['fund_model']
 
     def clean_tx_import(self):
         staged_txs_model: StagedTransactionModel = self.instance
@@ -150,6 +161,12 @@ class StagedTransactionModelForm(ModelForm):
             })
         }
 
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            fields.append('fund_model')
+            widgets['fund_model'] = Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES + ' is-small',
+            })
+
 
 class BaseStagedTransactionModelFormSet(BaseModelFormSet):
 
@@ -180,6 +197,14 @@ class BaseStagedTransactionModelFormSet(BaseModelFormSet):
             (u.uuid, u) if i > 0 else (None, '----') for i, u in
             enumerate(self.unit_model_qs)
         ]
+
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            self.fund_model_qs = entity_model.fundmodel_set.all()
+            self.FUND_MODEL_CHOICES = [
+                (f.uuid, f) if i > 0 else (None, '----') for i, f in
+                enumerate(self.fund_model_qs)
+            ]
+
         self.queryset = self.IMPORT_JOB_MODEL.stagedtransactionmodel_set.all().is_pending()
 
     def get_form_kwargs(self, index):
