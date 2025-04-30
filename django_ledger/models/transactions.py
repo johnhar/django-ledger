@@ -136,7 +136,7 @@ class TransactionModelQuerySet(QuerySet):
 
     def for_fund(self, fund_slug: Union[str, FundModel]):
         """
-        Filters transactions based on their associated entity unit.
+        Filters transactions based on their associated entity fund.
 
         Parameters
         ----------

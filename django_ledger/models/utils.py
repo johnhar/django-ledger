@@ -22,6 +22,7 @@ class LazyLoader:
 
         ENTITY_STATE_MODEL (str): The name of the entity state model.
         ENTITY_UNIT_MODEL (str): The name of the entity unit model.
+        FUND_MODEL (str): The name of the fund model.
         CLOSING_ENTRY_MODEL (str): The name of the closing entry model.
         CLOSING_ENTRY_TRANSACTION_MODEL (str): The name of the closing entry transaction model.
 
@@ -46,6 +47,7 @@ class LazyLoader:
         get_entity_model() -> Model: Returns the entity model.
         get_entity_unit_model() -> Model: Returns the entity unit model.
         get_entity_state_model() -> Model: Returns the entity state model.
+        get_fund_model() -> Model: Returns the fund model.
         get_bank_account_model() -> Model: Returns the bank account model.
         get_account_model() -> Model: Returns the account model.
         get_coa_model() -> Model: Returns the chart of account model.
@@ -131,6 +133,7 @@ class LazyLoader:
         return self.app_config.get_model(self.PURCHASE_ORDER_MODEL)
 
     def get_ledger_model(self):
+        # TODO JJH why do we need this?
         self.get_entity_unit_model()
         return self.app_config.get_model(self.LEDGER_MODEL)
 
