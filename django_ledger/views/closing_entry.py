@@ -128,7 +128,8 @@ class ClosingEntryModelDetailView(ClosingEntryModelBaseView, DetailView):
         ctx['page_title'] = f'Closing Entry {closing_entry_model.closing_date}'
         closing_entry_txs_qs = closing_entry_model.closingentrytransactionmodel_set.all()
         ctx['closing_entry_txs_qs'] = closing_entry_txs_qs.select_related(
-            'account_model', 'account_model__coa_model', 'unit_model')
+            'account_model', 'account_model__coa_model', 'unit_model', 'fund_model')
+        ctx['is_fund_enabled'] = ctx['entity_model'].is_fund_enabled()
         return ctx
 
 
@@ -148,7 +149,8 @@ class ClosingEntryModelUpdateView(ClosingEntryModelBaseView, UpdateView):
         ctx['page_title'] = f'Closing Entry {closing_entry_model.closing_date} Update'
         closing_entry_txs_qs = closing_entry_model.closingentrytransactionmodel_set.all()
         ctx['closing_entry_txs_qs'] = closing_entry_txs_qs.select_related(
-            'account_model', 'account_model__coa_model', 'unit_model')
+            'account_model', 'account_model__coa_model', 'unit_model', 'fund_model')
+        ctx['is_fund_enabled'] = ctx['entity_model'].is_fund_enabled()
         return ctx
 
     def get_success_url(self):

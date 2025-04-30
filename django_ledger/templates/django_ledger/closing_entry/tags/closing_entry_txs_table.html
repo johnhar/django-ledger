@@ -7,6 +7,9 @@
         <tr>
             <th class="has-text-centered">{% trans 'Account' %}</th>
             <th class="has-text-centered">{% trans 'Unit' %}</th>
+            {% if is_fund_enabled %}
+              <th class="has-text-centered">{% trans 'Fund' %}</th>
+            {% endif %}
             <th class="has-text-centered">{% trans 'Activity' %}</th>
             <th class="has-text-centered">{% trans 'TX Type' %}</th>
             <th class="has-text-centered">{% trans 'Balance' %}</th>
@@ -17,6 +20,9 @@
             <tr id="{{ ce_tx.get_html_id }}">
                 <td>{{ ce_tx.account_model }}</td>
                 <td>{{ ce_tx.unit_model.name }}</td>
+                {% if is_fund_enabled %}
+                  <td>{{ ce_tx.fund_model.name }}</td>
+                {% endif %}
                 <td>{% if ce_tx.activity %}{{ ce_tx.get_activity_display }}{% endif %}</td>
                 <td class="has-text-weight-bold {% if ce_tx.is_credit %}has-text-success{% else %}has-text-danger{% endif %}">{{ ce_tx.get_tx_type_display | upper }}</td>
                 <td>{% currency_symbol %}{{ ce_tx.balance | currency_format }}</td>

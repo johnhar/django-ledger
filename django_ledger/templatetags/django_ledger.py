@@ -307,7 +307,8 @@ def closing_entry_txs_table(context, closing_entry_txs_qs):
     ce_txs_list.sort(key=lambda ce_txs: ROLES_ORDER_ALL.index(ce_txs.account_model.role))
     return {
         'ce_txs_list': ce_txs_list,
-        'entity_slug': context['view'].kwargs['entity_slug']
+        'entity_slug': context['view'].kwargs['entity_slug'],
+        'is_fund_enabled': context['entity_model'].is_fund_enabled(),
     }
 
 

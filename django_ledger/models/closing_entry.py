@@ -109,11 +109,13 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
 
         ce_txs = self.closingentrytransactionmodel_set.all().select_related(
             'account_model',
-            'unit_model'
+            'unit_model',
+            'fund_model',
         ).order_by(
             'tx_type',
             'account_model',
             'unit_model',
+            'fund_model',
         )
 
         # evaluate the QS...
@@ -133,37 +135,43 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
                         f'do not equal Debits {ce_txs_sum[TransactionModel.DEBIT]}'
             )
 
-        key_func = lambda i: (str(i.unit_model_id) if i.unit_model_id else '', i.activity if i.activity else '')
+        key_func = lambda i: (
+            str(i.unit_model_id) if i.unit_model_id else '',
+            str(i.fund_model_id) if i.fund_model_id else '',
+            i.activity if i.activity else ''
+        )
 
         ce_txs.sort(key=key_func)
         ce_txs_gb = groupby(ce_txs, key=key_func)
         ce_txs_gb = {
-            unit_model_id: list(je_txs) for unit_model_id, je_txs in ce_txs_gb
+            (unit_model_id, fund_model_id, activity): list(je_txs) for (unit_model_id, fund_model_id, activity), je_txs
+            in ce_txs_gb
         }
 
         ce_txs_journal_entries = {
-            (unit_model_id, activity): JournalEntryModel(
+            (unit_model_id, fund_model_id, activity): JournalEntryModel(
                 ledger_id=self.ledger_model_id,
                 timestamp=self.get_closing_date_as_timestamp(),
                 activity=activity if activity else None,
                 entity_unit_id=unit_model_id if unit_model_id else None,
+                fund_id=fund_model_id if fund_model_id else None,
                 origin='closing_entry',
                 description=f'Closing Entry {self.closing_date}',
                 is_closing_entry=True,
                 posted=True,
                 locked=True
-            ) for (unit_model_id, activity), je_txs in ce_txs_gb.items()
+            ) for (unit_model_id, fund_model_id, activity), je_txs in ce_txs_gb.items()
         }
 
         ce_je_txs = {
-            (unit_model_id, activity): [
+            (unit_model_id, fund_model_id, activity): [
                 TransactionModel(
-                    journal_entry=ce_txs_journal_entries[(unit_model_id, activity)],
+                    journal_entry=ce_txs_journal_entries[(unit_model_id, fund_model_id, activity)],
                     tx_type=tx.tx_type,
                     account=tx.account_model,
                     amount=tx.balance
                 ) for tx in je_txs
-            ] for (unit_model_id, activity), je_txs in ce_txs_gb.items()
+            ] for (unit_model_id, fund_model_id, activity), je_txs in ce_txs_gb.items()
         }
 
         JournalEntryModel.objects.bulk_create(objs=chain([l for _, l in ce_txs_journal_entries.items()]))
@@ -388,7 +396,11 @@ class ClosingEntryTransactionModelAbstract(CreateUpdateMixIn):
                                    blank=True,
                                    on_delete=models.RESTRICT,
                                    verbose_name=_('Entity Model'))
-
+    fund_model = models.ForeignKey('django_ledger.FundModel',
+                                   null=True,
+                                   blank=True,
+                                   on_delete=models.RESTRICT,
+                                   verbose_name=_('Fund Model'))
     activity = models.CharField(max_length=20,
                                 choices=JournalEntryModel.ACTIVITIES,
                                 null=True,
@@ -414,6 +426,7 @@ class ClosingEntryTransactionModelAbstract(CreateUpdateMixIn):
                     'closing_entry_model',
                     'account_model',
                     'unit_model',
+                    'fund_model',
                     'activity'
                 ],
                 name='unique_closing_entry'
@@ -423,9 +436,30 @@ class ClosingEntryTransactionModelAbstract(CreateUpdateMixIn):
                     'closing_entry_model',
                     'account_model',
                     'unit_model',
+                    'fund_model',
                 ],
                 condition=Q(activity=None),
-                name='unique_ce_opt_1'
+                name='unique_ce_opt_1a'
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'closing_entry_model',
+                    'account_model',
+                    'fund_model',
+                    'activity'
+                ],
+                condition=Q(unit_model=None),
+                name='unique_ce_opt_1b'
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'closing_entry_model',
+                    'account_model',
+                    'unit_model',
+                    'activity'
+                ],
+                condition=Q(fund_model=None),
+                name='unique_ce_opt_1c'
             ),
             models.UniqueConstraint(
                 fields=[
@@ -433,15 +467,33 @@ class ClosingEntryTransactionModelAbstract(CreateUpdateMixIn):
                     'account_model',
                     'activity',
                 ],
-                condition=Q(unit_model=None),
-                name='unique_ce_opt_2'
+                condition=Q(unit_model=None) & Q(fund_model=None),
+                name='unique_ce_opt_2a'
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'closing_entry_model',
+                    'account_model',
+                    'unit_model',
+                ],
+                condition=Q(activity=None) & Q(fund_model=None),
+                name='unique_ce_opt_2b'
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'closing_entry_model',
+                    'account_model',
+                    'fund_model',
+                ],
+                condition=Q(unit_model=None) & Q(activity=None),
+                name='unique_ce_opt_2c'
             ),
             models.UniqueConstraint(
                 fields=[
                     'closing_entry_model',
                     'account_model'
                 ],
-                condition=Q(unit_model=None) & Q(activity=None),
+                condition=Q(unit_model=None) & Q(fund_model=None) & Q(activity=None),
                 name='unique_ce_opt_3'
             )
         ]
