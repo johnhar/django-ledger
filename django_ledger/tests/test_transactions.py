@@ -104,7 +104,20 @@ class TransactionModelFormSetTest(DjangoLedgerBaseTest):
 
         transaction_model_form_set = get_transactionmodel_formset_class(journal_entry_model=je_model)
 
+        # popuplate with the journal entry transactions
+        data = dict()
+        for i, txs in enumerate(je_model.transactionmodel_set.all()):
+            data[f'form-{i}-account'] = txs.account.uuid
+            data[f'form-{i}-tx_type'] = txs.tx_type
+            data[f'form-{i}-amount'] = txs.amount
+            data[f'form-{i}-description'] = txs.description
+            data[f'form-{i}-uuid'] = txs.uuid
+        data['form-TOTAL_FORMS'] = len(je_model.transactionmodel_set.all())
+        data['form-INITIAL_FORMS'] = len(je_model.transactionmodel_set.all())
+        data['form-MAX_NUM_FORMS'] = 20 # can set to anything
+
         txs_formset = transaction_model_form_set(
+            data=data,
             entity_model=entity_model,
             je_model=je_model,
         )
