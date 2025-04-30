@@ -610,8 +610,8 @@ class AccrualMixIn(models.Model):
 
             # Index (account_uuid, unit_uuid, fund_uuid, balance_type)
             current_ledger_state = {
-                # TODO JJH fix fund_uuid to work for non-invoice models (e.g. bills)
-                (a['account_uuid'], a['unit_uuid'], a.get('fund_uuid', None), a['balance_type']): a['balance'] for a in accounts_data
+                (a['account_uuid'], a['unit_uuid'], a['fund_uuid'], a['balance_type']): a['balance'] for a in
+                accounts_data
                 # (a['account_uuid'], a['unit_uuid'], a['balance_type'], a['role']): a['balance'] for a in digest_data
             }
 
@@ -619,8 +619,6 @@ class AccrualMixIn(models.Model):
             cogs_adjustment = defaultdict(lambda: Decimal('0.00'))
             inventory_adjustment = defaultdict(lambda: Decimal('0.00'))
             progress = self.get_progress()
-
-# TODO JJH check if we need to add support for POs and estimates here
 
             if isinstance(self, lazy_loader.get_bill_model()):
 
@@ -633,12 +631,6 @@ class AccrualMixIn(models.Model):
                     elif account_uuid_inventory:
                         item['account_uuid'] = account_uuid_inventory
                         item['account_balance_type'] = item.get('item_model__inventory_account__balance_type')
-
-                item_data_gb = groupby(item_data,
-                                       key=lambda a: (a['account_uuid'],
-                                                      a['entity_unit__uuid'],
-                                                      None,  # TODO JJH add fund support for bills, move this back outside the if statement
-                                                      a['account_balance_type']))
 
             elif isinstance(self, lazy_loader.get_invoice_model()):
 
@@ -684,14 +676,15 @@ class AccrualMixIn(models.Model):
                                 item.get('item_model__inventory_account__balance_type')
                             )] -= tot_amt * progress
 
-                item_data_gb = groupby(item_data,
-                                       key=lambda a: (a['account_uuid'],
-                                                      a['entity_unit__uuid'],
-                                                      a['fund__uuid'],
-                                                      a['account_balance_type']))
-
             else:
-                raise TypeError(f'unsupported financial instrument type: {type(self)}. Update AccruralMixIn.migrate_state() method to support this type of financial instrument.')
+                raise TypeError(
+                    f'unsupported financial instrument type: {type(self)}. Update AccruralMixIn.migrate_state() method to support this type of financial instrument.')
+
+            item_data_gb = groupby(item_data,
+                                   key=lambda a: (a['account_uuid'],
+                                                  a['entity_unit__uuid'],
+                                                  a['fund__uuid'],
+                                                  a['account_balance_type']))
 
             # scaling down item amount based on progress...
             progress_item_idx = {
@@ -710,7 +703,8 @@ class AccrualMixIn(models.Model):
 
             # { (unit_uuid, fund_uuid) : float (percent) }
             unit_fund_percents = {
-                k: (v / total_amount) if progress and total_amount else Decimal('0.00') for k, v in unit_fund_amounts.items()
+                k: (v / total_amount) if progress and total_amount else Decimal('0.00') for k, v in
+                unit_fund_amounts.items()
             }
 
             if not void:

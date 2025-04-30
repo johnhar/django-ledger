@@ -133,7 +133,6 @@ class LazyLoader:
         return self.app_config.get_model(self.PURCHASE_ORDER_MODEL)
 
     def get_ledger_model(self):
-        # TODO JJH why do we need this?
         self.get_entity_unit_model()
         return self.app_config.get_model(self.LEDGER_MODEL)
 
