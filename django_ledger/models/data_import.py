@@ -356,7 +356,7 @@ class StagedTransactionModelManager(Manager):
         related fields and calculated annotations for further processing and sorting.
 
         The method constructs a queryset with various related fields selected and annotated
-        for convenience. It includes fields for related account models, units, transactions,
+        for convenience. It includes fields for related account models, units, funds, transactions,
         journal entries, and import jobs. Annotations are added to calculate properties such
         as the number of child transactions, the total amount split, and whether the transaction
         is ready to import or can be split into journal entries.
@@ -453,7 +453,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
     split into multiple child transactions for financial processing purposes. It includes
     various attributes and methods to validate, process, and structure financial data for
     import and transaction management. The model supports hierarchical relationships,
-    role mapping, unit handling, and other important functionalities required for staged
+    role mapping, unit and fund handling, and other important functionalities required for staged
     transactions.
 
     Attributes

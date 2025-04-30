@@ -11,7 +11,7 @@ with them. Non-profits must have every transaction associated with a Fund.  A
 Journal Entry will typically have entries crediting and debiting from the same Fund.
 However, entries can transfer funds from one Fund to another.
 
-By creating Funds similar to Entity Units, we retain certain benefits:
+By creating Funds just like Entity Units, we retain certain benefits:
     1. Funds can generate their own financial statements, providing deeper
        insights into the specific operations of the nonprofit by a specific fund.
     2. Funds can be assigned to specific items on Bills and Invoices, offering
@@ -128,10 +128,10 @@ class FundModelAbstract(MP_Node,
         May be user defined. Must be unique for the EntityModel.
 
     active: bool
-        Active Funds may transact. Inactive units are considered archived. Defaults to True.
+        Active Funds may transact. Inactive funds are considered archived. Defaults to True.
 
     hidden: bool
-        Hidden Units will not show on drop down menus on the UI. Defaults to False.
+        Hidden Funds will not show on drop down menus on the UI. Defaults to False.
     """
     uuid = models.UUIDField(default=uuid4, editable=False, primary_key=True)
     slug = models.SlugField(max_length=50)
