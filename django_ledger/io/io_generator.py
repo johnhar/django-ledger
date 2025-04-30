@@ -836,7 +836,7 @@ class EntityDataGenerator(LoggingMixIn):
             amount=self.capital_contribution,
             je_timestamp=self.start_date,
             je_posted=True,
-            je_fund_model=choice(self.fund_models),
+            je_fund_model=choice(self.fund_models) if self.fund_models else None,
             ledger_posted=True,
             description='Entity Funding for Sample Data',
         )
