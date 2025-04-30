@@ -18,7 +18,7 @@ from django_ledger.models import EntityModel, ChartOfAccountModel
 from django_ledger.models.accounts import AccountModel
 from django_ledger.views.mixins import (
     YearlyReportMixIn, MonthlyReportMixIn, QuarterlyReportMixIn, DjangoLedgerSecurityMixIn,
-    BaseDateNavigationUrlMixIn, EntityUnitMixIn, DateReportMixIn
+    BaseDateNavigationUrlMixIn, EntityUnitMixIn, FundMixIn, DateReportMixIn
 )
 
 
@@ -169,6 +169,7 @@ class AccountModelDetailView(BaseAccountModelBaseView, RedirectView):
 class AccountModelYearDetailView(BaseAccountModelBaseView,
                                  BaseDateNavigationUrlMixIn,
                                  EntityUnitMixIn,
+                                 FundMixIn,
                                  YearlyReportMixIn,
                                  DetailView):
     context_object_name = 'account'
@@ -191,6 +192,7 @@ class AccountModelYearDetailView(BaseAccountModelBaseView,
         ).select_related(
             'journal_entry',
             'journal_entry__entity_unit',
+            'journal_entry__fund',
             'journal_entry__ledger__billmodel',
             'journal_entry__ledger__invoicemodel',
         )

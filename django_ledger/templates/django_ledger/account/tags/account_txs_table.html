@@ -10,6 +10,9 @@
             <th class="has-text-centered">Debit</th>
             <th class="has-text-centered">Description</th>
             <th class="has-text-centered">Unit</th>
+            {% if is_fund_enabled %}
+              <th class="has-text-centered">Fund</th>
+            {% endif %}
             <th class="has-text-centered">Actions</th>
         </tr>
         {% for tx in transactions %}
@@ -20,6 +23,9 @@
                 <td>{% if tx.tx_type == 'debit' %}${{ tx.amount | currency_format }}{% endif %}</td>
                 <td>{{ tx.description }}</td>
                 <td>{{ tx.journal_entry.entity_unit.name }}</td>
+                {% if is_fund_enabled %}
+                  <td>{{ tx.journal_entry.entity_fund.name }}</td>
+                {% endif %}
                 <td>
                     <div class="dropdown is-right is-hoverable" id="tx-action-{{ tx.uuid }}">
                         <div class="dropdown-trigger">

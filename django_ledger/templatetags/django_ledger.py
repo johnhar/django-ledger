@@ -340,13 +340,15 @@ def vendor_table(context):
 
 @register.inclusion_tag('django_ledger/account/tags/account_txs_table.html', takes_context=True)
 def account_txs_table(context, txs_qs):
-    return {
+    result = {
         'transactions': txs_qs,
         'total_credits': sum(tx.amount for tx in txs_qs if tx.tx_type == 'credit'),
         'total_debits': sum(tx.amount for tx in txs_qs if tx.tx_type == 'debit'),
         'entity_slug': context['view'].kwargs['entity_slug'],
-        'account_pk': context['view'].kwargs['account_pk']
+        'account_pk': context['view'].kwargs['account_pk'],
+        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
     }
+    return result
 
 
 @register.inclusion_tag('django_ledger/components/breadcrumbs.html', takes_context=True)
