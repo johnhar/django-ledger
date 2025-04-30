@@ -41,7 +41,8 @@ from django_ledger.models.signals import (
     estimate_status_completed,
     estimate_status_in_review
 )
-from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_ESTIMATE_NUMBER_PREFIX
+from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_ESTIMATE_NUMBER_PREFIX, \
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 ESTIMATE_NUMBER_CHARS = ascii_uppercase + digits
 
@@ -1527,6 +1528,8 @@ class EstimateModelAbstract(CreateUpdateMixIn,
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_ESTIMATE
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1546,6 +1549,8 @@ class EstimateModelAbstract(CreateUpdateMixIn,
                 'key': EntityStateModel.KEY_ESTIMATE,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
 
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model

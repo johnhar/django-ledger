@@ -605,7 +605,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         -------
         List[Dict]
             A list of dictionaries, each representing a transaction with fields such as
-            account, absolute amount, staged amount, unit model, transaction type, description,
+            account, absolute amount, staged amount, unit model, fund model, transaction type, description,
             and the corresponding staged transaction model.
         """
         if self.has_children():

@@ -51,7 +51,8 @@ from django_ledger.models.signals import (
     invoice_status_canceled,
     invoice_status_void
 )
-from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_INVOICE_NUMBER_PREFIX
+from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_INVOICE_NUMBER_PREFIX, \
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 UserModel = get_user_model()
 
@@ -1729,6 +1730,8 @@ class InvoiceModelAbstract(
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_INVOICE
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id__exact'] = None
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1749,6 +1752,8 @@ class InvoiceModelAbstract(
                 'key': EntityStateModel.KEY_INVOICE,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
 
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model

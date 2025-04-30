@@ -20,7 +20,8 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ledger.models.mixins import ContactInfoMixIn, CreateUpdateMixIn, FinancialAccountInfoMixin, TaxInfoMixIn
 from django_ledger.models.utils import lazy_loader
-from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_VENDOR_NUMBER_PREFIX
+from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_VENDOR_NUMBER_PREFIX, \
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class VendorModelValidationError(ValidationError):
@@ -261,6 +262,9 @@ class VendorModelAbstract(ContactInfoMixIn,
                 'key': EntityStateModel.KEY_VENDOR,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
+
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:

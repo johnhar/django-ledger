@@ -33,7 +33,7 @@ from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.utils import lazy_loader
 from django_ledger.settings import (DJANGO_LEDGER_TRANSACTION_MAX_TOLERANCE, DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING,
                                     DJANGO_LEDGER_EXPENSE_NUMBER_PREFIX, DJANGO_LEDGER_INVENTORY_NUMBER_PREFIX,
-                                    DJANGO_LEDGER_PRODUCT_NUMBER_PREFIX)
+                                    DJANGO_LEDGER_PRODUCT_NUMBER_PREFIX, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES)
 
 ITEM_LIST_RANDOM_SLUG_SUFFIX = ascii_lowercase + digits
 
@@ -758,11 +758,13 @@ class ItemModelAbstract(CreateUpdateMixIn):
             LOOKUP = {
                 'entity_model_id': self.entity_id,
                 'entity_unit_id': None,
-                'fund_id': None,
                 'fiscal_year': None,
                 'key': EntityStateModel.KEY_ITEM,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
+
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:

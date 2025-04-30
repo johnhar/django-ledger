@@ -49,7 +49,8 @@ from django_ledger.models.signals import (
     bill_status_void,
 )
 from django_ledger.models.utils import lazy_loader
-from django_ledger.settings import (DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_BILL_NUMBER_PREFIX)
+from django_ledger.settings import (DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_BILL_NUMBER_PREFIX,
+                                    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES)
 
 UserModel = get_user_model()
 
@@ -560,11 +561,19 @@ class BillModelAbstract(
         A tuple: ItemTransactionModelQuerySet, dict
         """
         if not queryset:
-            queryset = self.itemtransactionmodel_set.all().select_related(
-                'item_model',
-                'entity_unit',
-                'po_model',
-                'bill_model')
+            if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                queryset = self.itemtransactionmodel_set.all().select_related(
+                    'item_model',
+                    'entity_unit',
+                    'po_model',
+                    'bill_model')
+            else:
+                queryset = self.itemtransactionmodel_set.all().select_related(
+                    'item_model',
+                    'entity_unit',
+                    'fund',
+                    'po_model',
+                    'bill_model')
         else:
             self.validate_itemtxs_qs(queryset)
 
@@ -1828,6 +1837,8 @@ class BillModelAbstract(
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_BILL
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id__exact'] = None
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1848,6 +1859,8 @@ class BillModelAbstract(
                 'key': EntityStateModel.KEY_BILL,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:

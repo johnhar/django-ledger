@@ -3,7 +3,7 @@ from django.forms import ModelForm, TextInput, Select
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.models.ledger import LedgerModel
-from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
+from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 class LedgerModelCreateForm(ModelForm):
@@ -59,3 +59,7 @@ class LedgerModelUpdateForm(LedgerModelCreateForm):
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES
             }),
         }
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            widgets['fund'] = Select(attrs={
+                'class': DJANGO_LEDGER_FORM_INPUT_CLASSES
+            })

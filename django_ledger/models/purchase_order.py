@@ -42,7 +42,8 @@ from django_ledger.models.signals import (
     po_status_in_review
 )
 from django_ledger.models.utils import lazy_loader
-from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_PO_NUMBER_PREFIX
+from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_PO_NUMBER_PREFIX, \
+    DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 PO_NUMBER_CHARS = ascii_uppercase + digits
 
@@ -1168,6 +1169,8 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_PURCHASE_ORDER
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1188,6 +1191,8 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 'key': EntityStateModel.KEY_PURCHASE_ORDER,
                 'sequence': 1
             }
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                LOOKUP['fund_id'] = None
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
