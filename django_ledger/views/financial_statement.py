@@ -14,10 +14,9 @@ from django.views.generic import DetailView, RedirectView
 from django_ledger.io.io_core import get_localdate
 from django_ledger.models import EntityModel, EntityUnitModel
 from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
-from django_ledger.views import FundMixIn
 from django_ledger.views.mixins import (
     QuarterlyReportMixIn, YearlyReportMixIn,
-    MonthlyReportMixIn, DateReportMixIn, DjangoLedgerSecurityMixIn, EntityUnitMixIn,
+    MonthlyReportMixIn, DateReportMixIn, DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn,
     BaseDateNavigationUrlMixIn, PDFReportMixIn
 )
 
