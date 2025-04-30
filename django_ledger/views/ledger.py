@@ -22,7 +22,7 @@ from django_ledger.models.ledger import LedgerModel
 from django_ledger.views.mixins import (
     YearlyReportMixIn, QuarterlyReportMixIn,
     MonthlyReportMixIn, DjangoLedgerSecurityMixIn, DateReportMixIn, BaseDateNavigationUrlMixIn,
-    EntityUnitMixIn, PDFReportMixIn
+    EntityUnitMixIn, FundMixIn, PDFReportMixIn
 )
 
 
@@ -212,6 +212,7 @@ class BaseLedgerModelBalanceSheetView(LedgerModelModelBaseView, RedirectView):
 class FiscalYearLedgerModelBalanceSheetView(LedgerModelModelBaseView,
                                             BaseDateNavigationUrlMixIn,
                                             EntityUnitMixIn,
+                                            FundMixIn,
                                             YearlyReportMixIn,
                                             PDFReportMixIn,
                                             DetailView):
@@ -224,6 +225,7 @@ class FiscalYearLedgerModelBalanceSheetView(LedgerModelModelBaseView,
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Ledger Balance Sheet: ') + self.object.name
         context['header_title'] = context['page_title']
+        context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
         return context
 
 
@@ -261,6 +263,7 @@ class BaseLedgerIncomeStatementView(LedgerModelModelBaseView, RedirectView):
 class FiscalYearLedgerIncomeStatementView(LedgerModelModelBaseView,
                                           BaseDateNavigationUrlMixIn,
                                           EntityUnitMixIn,
+                                          FundMixIn,
                                           YearlyReportMixIn,
                                           PDFReportMixIn,
                                           DetailView):
@@ -272,6 +275,7 @@ class FiscalYearLedgerIncomeStatementView(LedgerModelModelBaseView,
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Ledger Income Statement: ') + self.object.name
         context['header_title'] = context['page_title']
+        context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
         return context
 
 
@@ -309,6 +313,7 @@ class BaseLedgerModelCashFlowStatementRedirectView(LedgerModelModelBaseView, Red
 class FiscalYearLedgerModelCashFlowStatementView(LedgerModelModelBaseView,
                                                  BaseDateNavigationUrlMixIn,
                                                  EntityUnitMixIn,
+                                                 FundMixIn,
                                                  YearlyReportMixIn,
                                                  PDFReportMixIn,
                                                  DetailView):
@@ -325,6 +330,7 @@ class FiscalYearLedgerModelCashFlowStatementView(LedgerModelModelBaseView,
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Ledger Cash Flow Statement: ') + self.object.name
         context['header_title'] = context['page_title']
+        context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
         return context
 
 
