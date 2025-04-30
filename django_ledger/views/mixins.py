@@ -523,6 +523,10 @@ class UnpaidElementsMixIn:
             if unit_slug:
                 qs = qs.filter(ledger__journal_entries__entity_unit__slug__exact=unit_slug)
 
+            fund_slug = self.get_fund_slug()
+            if fund_slug:
+                qs = qs.filter(ledger__journal_entries__fund__slug__exact=fund_slug)
+
             return qs
 
     def get_unpaid_bills_qs(self, context, from_date=None, to_date=None):
@@ -541,6 +545,10 @@ class UnpaidElementsMixIn:
             unit_slug = self.get_unit_slug()
             if unit_slug:
                 qs = qs.filter(ledger__journal_entries__entity_unit__slug__exact=unit_slug)
+
+            fund_slug = self.get_fund_slug()
+            if fund_slug:
+                qs = qs.filter(ledger__journal_entries__fund__slug__exact=fund_slug)
 
             return qs
 

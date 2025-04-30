@@ -251,7 +251,7 @@ class InvoiceModelAbstract(
     invoice_number: str
         Auto assigned number at creation by generate_invoice_number() function.
         Prefix be customized with DJANGO_LEDGER_INVOICE_NUMBER_PREFIX setting.
-        Includes a reference to the Fiscal Year, Entity Unit and a sequence number. Max Length is 20.
+        Includes a reference to the Fiscal Year, Entity Unit, Fund and a sequence number. Max Length is 20.
     invoice_status: str
         Current status of the InvoiceModel. Must be one of the choices as mentioned under "INVOICE_STATUS".
         By default, the status will be "Draft".
@@ -527,6 +527,7 @@ class InvoiceModelAbstract(
             queryset = self.itemtransactionmodel_set.all().select_related(
                 'item_model',
                 'entity_unit',
+                'fund',
                 'po_model',
                 'invoice_model'
             )
