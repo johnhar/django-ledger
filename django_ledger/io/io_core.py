@@ -744,7 +744,6 @@ class IODatabaseMixIn:
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
                 ).for_unit(unit_slug=unit_slug)
-                print(f'database_digest for entity "{self.name}" found {txs_queryset_init.count()} transactions for entity unit {unit_slug}')      # TODO JJH remove
 
             elif fund_slug:
 
@@ -752,7 +751,6 @@ class IODatabaseMixIn:
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
                 ).for_fund(fund_slug=fund_slug)
-                print(f'database_digest for entity "{self.name}" found {txs_queryset_init.count()} transactions for fund {fund_slug}')      # TODO JJH remove
 
             else:
                 txs_queryset_init = TransactionModel.objects.for_entity(
@@ -768,7 +766,6 @@ class IODatabaseMixIn:
                 user_model=user_model,
                 entity_slug=entity_slug,
             ).for_unit(unit_slug=unit_slug or self)
-            print(f'database_digest for unit "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         elif self.is_fund_model():
             if not entity_slug:
@@ -779,7 +776,6 @@ class IODatabaseMixIn:
                 user_model=user_model,
                 entity_slug=entity_slug,
             ).for_fund(fund_slug=fund_slug or self)
-            print(f'database_digest for fund "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         elif self.is_ledger_model():
             if not entity_slug:
@@ -790,7 +786,6 @@ class IODatabaseMixIn:
                 entity_slug=entity_slug,
                 user_model=user_model,
             ).for_ledger(ledger_model=self)
-            print(f'database_digest for ledger "{self.name}" found {txs_queryset_init.count()} transactions')      # TODO JJH remove
 
         else:
             raise IOValidationError(

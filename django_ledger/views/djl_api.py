@@ -26,15 +26,12 @@ class PnLAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn, View):
         if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
             # Call the EntityUnitMixIn's get_context_data() explicitly
             context = EntityUnitMixIn.get_context_data(self, **kwargs)
-            print(f'PnLAPIView using unit dashboard context')   # TODO JJH remove
         elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
             # Call the FundMixIn's get_context_data() explicitly
             context = FundMixIn.get_context_data(self, **kwargs)
-            print(f'PnLAPIView using fund dashboard context')   # TODO JJH remove
         else:
             # Default behavior if neither match
             context = super().get_context_data(**kwargs)
-            print(f'PnLAPIView using entity dashboard context')   # TODO JJH remove
 
         return context
 
@@ -46,8 +43,6 @@ class PnLAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn, View):
 
             unit_slug = self.get_unit_slug()
             fund_slug = self.get_fund_slug()
-            print(f'PnLAPIView unit_slug: {unit_slug}')   # TODO JJH remove
-            print(f'PnLAPIView fund_slug: {fund_slug}')   # TODO JJH remove
 
             io_digest = entity.digest(
                 user_model=self.request.user,
@@ -94,15 +89,12 @@ class PayableNetAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn, V
         if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
             # Call the EntityUnitMixIn's get_context_data() explicitly
             context = EntityUnitMixIn.get_context_data(self, **kwargs)
-            print(f'PayableNetAPIView using unit dashboard context')   # TODO JJH remove
         elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
             # Call the FundMixIn's get_context_data() explicitly
             context = FundMixIn.get_context_data(self, **kwargs)
-            print(f'PayableNetAPIView using fund dashboard context')   # TODO JJH remove
         else:
             # Default behavior if neither match
             context = super().get_context_data(**kwargs)
-            print(f'PayableNetAPIVie wusing entity dashboard context')   # TODO JJH remove
 
         return context
 
@@ -121,8 +113,6 @@ class PayableNetAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn, V
             fund_slug = self.get_fund_slug()
             # if fund_slug:
             #     bill_qs.filter(ledger__journal_entry__?__exact=fund_slug)
-            print(f'PayableNetAPIView unit_slug: {unit_slug}')   # TODO JJH remove
-            print(f'PayableNetAPIView fund_slug: {fund_slug}')   # TODO JJH remove
 
             net_summary = accruable_net_summary(bill_qs)
             entity_model = bill_qs.first().ledger.entity
@@ -148,15 +138,12 @@ class ReceivableNetAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn
         if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
             # Call the EntityUnitMixIn's get_context_data() explicitly
             context = EntityUnitMixIn.get_context_data(self, **kwargs)
-            print(f'ReceivableNetAPIView using unit dashboard context')   # TODO JJH remove
         elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
             # Call the FundMixIn's get_context_data() explicitly
             context = FundMixIn.get_context_data(self, **kwargs)
-            print(f'ReceivableNetAPIView using fund dashboard context')   # TODO JJH remove
         else:
             # Default behavior if neither match
             context = super().get_context_data(**kwargs)
-            print(f'ReceivableNetAPIView using entity dashboard context')   # TODO JJH remove
 
         return context
 
@@ -175,8 +162,6 @@ class ReceivableNetAPIView(DjangoLedgerSecurityMixIn, EntityUnitMixIn, FundMixIn
             fund_slug = self.get_fund_slug()
             # if fund_slug:
             #     invoice_qs.filter(ledger__journal_entry__?__slug__exact=fund_slug)
-            print(f'ReceivableNetAPIView unit_slug: {unit_slug}')   # TODO JJH remove
-            print(f'ReceivableNetAPIView fund_slug: {fund_slug}')   # TODO JJH remove
 
             net_summary = accruable_net_summary(invoice_qs)
             entity_model = invoice_qs.first().ledger.entity

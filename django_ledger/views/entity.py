@@ -176,15 +176,12 @@ class EntityModelDetailHandlerView(DjangoLedgerSecurityMixIn,
         if EntityUnitMixIn.UNIT_SLUG_KWARG in self.kwargs:
             # Call the EntityUnitMixIn's get_context_data() explicitly
             context = EntityUnitMixIn.get_context_data(self, **kwargs)
-            print(f'using unit dashboard context')      # TODO JJH remove
         elif FundMixIn.FUND_SLUG_KWARG in self.kwargs:
             # Call the FundMixIn's get_context_data() explicitly
             context = FundMixIn.get_context_data(self, **kwargs)
-            print(f'using fund dashboard context')      # TODO JJH remove
         else:
             # Default behavior if neither match
             context = super().get_context_data(**kwargs)
-            print(f'using entity dashboard context')      # TODO JJH remove
 
         return context
 
@@ -252,7 +249,6 @@ class EntityModelDetailBaseView(DjangoLedgerSecurityMixIn,
         else:
             # Default behavior if neither match
             context = super().get_context_data(**kwargs)
-            print(f'using entity dashboard context')      # TODO JJH remove
 
         entity_model: EntityModel = self.object
         context['page_title'] = entity_model.name
