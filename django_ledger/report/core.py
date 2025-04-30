@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django_ledger.io.io_context import IODigestContextManager
 from django_ledger.models.ledger import LedgerModel
 from django_ledger.models.unit import EntityUnitModel
+from django_ledger.models.fund import FundModel
 from django_ledger.settings import DJANGO_LEDGER_PDF_SUPPORT_ENABLED
 from django_ledger.templatetags.django_ledger import currency_symbol, currency_format
 
@@ -179,6 +180,12 @@ class BaseReportSupport(*load_support()):
             if self.REPORT_SUBTITLE:
                 return unit_model.get_entity_name()
             return f'{unit_model.get_entity_name()} | Unit {unit_model.name}'
+        elif self.IO_DIGEST.is_fund_model():
+            fund_model: FundModel = self.IO_DIGEST.IO_MODEL
+            if self.REPORT_SUBTITLE:
+                return fund_model.get_entity_name()
+            return f'{fund_model.get_entity_name()} | Fund {fund_model.name}'
+
         raise PDFReportValidationError('get_report_title() not implemented for'
                                        f' IO_MODEL {self.IO_DIGEST.IO_MODEL.__class__.__name__}')
 

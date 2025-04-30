@@ -6,12 +6,16 @@
 {% block aux_menu %}
     {% if unit_model and entity %}
         <div class="column is-12">{% period_navigation 'unit-cf' %}</div>
+    {% elif fund_model and entity %}
+        <div class="column is-12">{% period_navigation 'fund-cf' %}</div>
     {% elif entity %}
         <div class="column is-12">{% period_navigation 'entity-cf' %}</div>
     {% elif ledger %}
         <div class="column is-12">{% period_navigation 'ledger-cf' %}</div>
     {% elif unit_model %}
         <div class="column is-12">{% period_navigation 'unit-cf' %}</div>
+    {% elif fund_model %}
+        <div class="column is-12">{% period_navigation 'fund-cf' %}</div>
     {% endif %}
 {% endblock %}
 
@@ -23,6 +27,8 @@
                     <div class="column">
                         {% if unit_model and entity %}
                             <h1 class="is-size-2 has-text-weight-light">{{ entity.name }}</h1>
+                        {% elif fund_model and entity %}
+                            <h1 class="is-size-2 has-text-weight-light">{{ entity.name }}</h1>
                         {% elif entity %}
                             <h1 class="is-size-2 has-text-weight-light">{{ entity.name }}</h1>
                         {% elif ledger %}
@@ -31,6 +37,8 @@
                         <h1 class="is-size-2 has-text-weight-bold">{% trans 'Cash Flow Statement' %}</h1>
                         {% if unit_model %}
                             <h3 class="is-size-4 has-text-weight-bold has-text-success">{{ unit_model.name }} {% trans 'Unit' %}</h3>
+                        {% elif fund_model %}
+                            <h3 class="is-size-4 has-text-weight-bold has-text-success">{{ fund_model.name }} {% trans 'Fund' %}</h3>
                         {% endif %}
                         <h2 class="is-size-2 has-text-weight-light">
                             {% if quarter %}{{ year }} | Q{{ quarter }}
@@ -55,6 +63,10 @@
             {% endif %}
             <a class="button is-fullwidth is-light is-small my-2"
                href="?by_unit=1">{% trans 'By Unit' %}</a>
+            {% if is_fund_enabled %}
+                <a class="button is-fullwidth is-light is-small my-2"
+                   href="?by_fund=1">{% trans 'By Fund' %}</a>
+            {% endif %}
 
             <a class="button is-fullwidth is-link my-2"
                href="{{ request.path }}?format=pdf">{% trans 'Download PDF' %}</a>

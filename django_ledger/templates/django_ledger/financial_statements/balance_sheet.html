@@ -10,6 +10,8 @@
         <div class="column is-12">{% period_navigation 'ledger-bs' %}</div>
     {% elif unit_model %}
         <div class="column is-12">{% period_navigation 'unit-bs' %}</div>
+    {% elif fund_model %}
+      <div class="column is-12">{% period_navigation 'fund-bs' %}</div>
     {% endif %}
 {% endblock %}
 
@@ -26,10 +28,14 @@
                             <h1 class="is-size-2 has-text-weight-light">{{ ledger.name }}</h1>
                         {% elif unit_model %}
                             <h1 class="is-size-2 has-text-weight-light">{{ ledger.name }}</h1>
+                        {% elif fund_model %}
+                            <h1 class="is-size-2 has-text-weight-light">{{ ledger.name }}</h1>
                         {% endif %}
                         <h1 class="is-size-2 has-text-weight-bold">{% trans 'Balance Sheet' %}</h1>
                         {% if unit_model %}
                             <h3 class="is-size-4 has-text-weight-medium is-italic">{{ unit_model.name }} {% trans 'Unit' %}</h3>
+                        {% elif fund_model %}
+                            <h3 class="is-size-4 has-text-weight-medium is-italic">{{ fund_model.name }} {% trans 'Fund' %}</h3>
                         {% endif %}
                         <h2 class="is-size-2 has-text-weight-light">
                             {% if quarter %}{{ year }} | Q{{ quarter }}
@@ -52,6 +58,10 @@
             {% endif %}
             <a class="button is-fullwidth is-light my-2"
                href="?by_unit=1">{% trans 'By Unit' %}</a>
+            {% if is_fund_enabled %}
+            <a class="button is-fullwidth is-light my-2"
+               href="?by_fund=1">{% trans 'By Fund' %}</a>
+            {% endif %}
 
             <a class="button is-fullwidth is-link my-2"
                href="{{ request.path }}?format=pdf">{% trans 'Download PDF' %}</a>

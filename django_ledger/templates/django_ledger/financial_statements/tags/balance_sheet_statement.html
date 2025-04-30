@@ -9,7 +9,7 @@
                 <tr>
                     <td><h2 class="is-size-3">{{ bs_role | upper }}</h2></td>
                     <td></td>
-                    {% if tx_digest.by_unit %}
+                    {% if tx_digest.by_unit or tx_digest.by_fund %}
                         <td></td>
                     {% endif %}
                     <td></td>
@@ -21,6 +21,8 @@
                     <th class="has-text-centered">{% trans 'Account Name' %}</th>
                     {% if tx_digest.by_unit %}
                         <th class="has-text-centered">{% trans 'Unit' %}</th>
+                    {% elif tx_digest.by_fund %}
+                        <th class="has-text-centered">{% trans 'Fund' %}</th>
                     {% endif %}
                     <th class="has-text-centered">{% trans 'Balance Type' %}</th>
                     <th class="has-text-centered">{% trans 'Balance Through' %} {{ tx_digest.to_date | date }}</th>
@@ -31,7 +33,7 @@
                     <tr class="has-background-grey-light">
                         <td class="p-3 has-text-weight-bold">{{ acc_data.role_name | upper }}</td>
                         <td></td>
-                        {% if tx_digest.by_unit %}
+                        {% if tx_digest.by_unit or tx_digest.by_fund %}
                             <td></td>
                         {% endif %}
                         <td></td>
@@ -45,6 +47,8 @@
                             <td class="has-text-left">{{ acc.name }}</td>
                             {% if tx_digest.by_unit %}
                                 <td>{% if acc.unit_name %}{{ acc.unit_name }}{% endif %}</td>
+                            {% elif tx_digest.by_fund %}
+                                <td>{% if acc.fund_name %}{{ acc.fund_name }}{% endif %}</td>
                             {% endif %}
                             <td class="has-text-centered">{{ acc.balance_type.0 | upper }}</td>
                             <td class="has-text-right">{% currency_symbol %}{{ acc.balance | currency_format }}</td>
@@ -75,7 +79,7 @@
                         <td></td>
                         <td>{{ acc_data.role_name | upper }} {% trans 'Total:' %}</td>
                         <td></td>
-                        {% if tx_digest.by_unit %}
+                        {% if tx_digest.by_unit or tx_digest.by_fund %}
                             <td></td>
                         {% endif %}
                         <td class="has-text-right">
@@ -90,7 +94,7 @@
                     <tr class="has-text-weight-bold is-size-5">
                     <td>{% trans 'Total' %} {{ bs_role | upper }}</td>
                     <td></td>
-                    {% if tx_digest.by_unit %}
+                    {% if tx_digest.by_unit or tx_digest.by_fund %}
                         <td></td>
                     {% endif %}
                     <td></td>
@@ -106,7 +110,7 @@
         <tr class="has-text-weight-bold is-size-5">
             <td>{% trans 'Retained Earnings' %}</td>
             <td></td>
-            {% if tx_digest.by_unit %}
+            {% if tx_digest.by_unit or tx_digest.by_fund %}
                 <td></td>
             {% endif %}
             <td></td>
@@ -117,7 +121,7 @@
         <tr class="has-text-weight-bold is-size-5">
             <td>{% trans 'Total EQUITY' %}</td>
             <td></td>
-            {% if tx_digest.by_unit %}
+            {% if tx_digest.by_unit or tx_digest.by_fund %}
                 <td></td>
             {% endif %}
             <td></td>
@@ -127,7 +131,7 @@
         <tr class="has-text-weight-bold is-size-5">
             <td>{% trans 'Total Equity + Liabilities' %}</td>
             <td></td>
-            {% if tx_digest.by_unit %}
+            {% if tx_digest.by_unit or tx_digest.by_fund %}
                 <td></td>
             {% endif %}
             <td></td>

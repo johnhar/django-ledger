@@ -6,6 +6,8 @@
 {% block aux_menu %}
     {% if unit_model %}
         <div class="column is-12">{% period_navigation 'unit-ic' %}</div>
+    {% elif fund_model %}
+        <div class="column is-12">{% period_navigation 'fund-ic' %}</div>
     {% elif entity %}
         <div class="column is-12">{% period_navigation 'entity-ic' %}</div>
     {% elif ledger %}
@@ -26,6 +28,8 @@
                         {% endif %}
                         {% if unit_model %}
                             <h3 class="is-size-4 has-text-weight-medium is-italic">{{ unit_model.name }} {% trans 'Unit' %}</h3>
+                        {% elif fund_model %}
+                            <h3 class="is-size-4 has-text-weight-medium is-italic">{{ fund_model.name }} {% trans 'Fund' %}</h3>
                         {% endif %}
 
                         <h1 class="is-size-2 has-text-weight-bold">{% trans 'Income Statement' %}</h1>
@@ -54,7 +58,10 @@
             {% endif %}
             <a class="button is-fullwidth is-light my-2"
                href="?by_unit=1">{% trans 'By Unit' %}</a>
-
+            {% if is_fund_enabled %}
+              <a class="button is-fullwidth is-light my-2"
+                 href="?by_fund=1">{% trans 'By Fund' %}</a>
+            {% endif %}
             <a class="button is-fullwidth is-link my-2"
                href="{{ request.path }}?format=pdf">{% trans 'Download PDF' %}</a>
         </div>

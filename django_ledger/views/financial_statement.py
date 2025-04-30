@@ -13,6 +13,8 @@ from django.views.generic import DetailView, RedirectView
 
 from django_ledger.io.io_core import get_localdate
 from django_ledger.models import EntityModel, EntityUnitModel
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
+from django_ledger.views import FundMixIn
 from django_ledger.views.mixins import (
     QuarterlyReportMixIn, YearlyReportMixIn,
     MonthlyReportMixIn, DateReportMixIn, DjangoLedgerSecurityMixIn, EntityUnitMixIn,
@@ -46,6 +48,7 @@ class FiscalYearBalanceSheetView(DjangoLedgerSecurityMixIn,
                                  EntityModelModelViewQuerySetMixIn,
                                  BaseDateNavigationUrlMixIn,
                                  EntityUnitMixIn,
+                                 FundMixIn,
                                  YearlyReportMixIn,
                                  PDFReportMixIn,
                                  DetailView):
@@ -63,6 +66,15 @@ class FiscalYearBalanceSheetView(DjangoLedgerSecurityMixIn,
             context['unit_model'] = get_object_or_404(EntityUnitModel,
                                                       slug=unit_slug,
                                                       entity__slug__exact=self.kwargs['entity_slug'])
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
+            fund_slug = self.request.GET.get('fund')
+            if fund_slug:
+                context['fund_model'] = get_object_or_404(EntityUnitModel,
+                                                          slug=fund_slug,
+                                                          entity__slug__exact=self.kwargs['entity_slug']
+                )
+
         return context
 
 
@@ -99,6 +111,7 @@ class FiscalYearIncomeStatementView(DjangoLedgerSecurityMixIn,
                                     EntityModelModelViewQuerySetMixIn,
                                     BaseDateNavigationUrlMixIn,
                                     EntityUnitMixIn,
+                                    FundMixIn,
                                     YearlyReportMixIn,
                                     PDFReportMixIn,
                                     DetailView):
@@ -108,7 +121,7 @@ class FiscalYearIncomeStatementView(DjangoLedgerSecurityMixIn,
     pdf_report_type = 'IS'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = super(FiscalYearIncomeStatementView, self).get_context_data(**kwargs)
         entity_model: EntityModel = self.object
         context['page_title'] = _('Income Statement: ') + entity_model.name
         context['header_title'] = _('Income Statement: ') + entity_model.name
@@ -118,6 +131,15 @@ class FiscalYearIncomeStatementView(DjangoLedgerSecurityMixIn,
             context['unit_model'] = get_object_or_404(entity_unit_qs,
                                                       slug__exact=unit_slug,
                                                       entity__slug__exact=self.kwargs['entity_slug'])
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
+            fund_slug = self.kwargs.get('fund_slug')
+            if fund_slug:
+                fund_qs = entity_model.fundmodel_set.all()
+                context['fund_model'] = get_object_or_404(fund_qs,
+                                                          slug__exact=fund_slug,
+                                                          entity__slug__exact=self.kwargs['entity_slug'])
+
         return context
 
 
@@ -155,6 +177,7 @@ class FiscalYearCashFlowStatementView(DjangoLedgerSecurityMixIn,
                                       EntityModelModelViewQuerySetMixIn,
                                       BaseDateNavigationUrlMixIn,
                                       EntityUnitMixIn,
+                                      FundMixIn,
                                       YearlyReportMixIn,
                                       PDFReportMixIn,
                                       DetailView):
@@ -168,7 +191,7 @@ class FiscalYearCashFlowStatementView(DjangoLedgerSecurityMixIn,
     pdf_report_type = 'CFS'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = super(FiscalYearCashFlowStatementView, self).get_context_data(**kwargs)
         entity_model: EntityModel = self.object
         context['page_title'] = _('Cash Flow Statement: ') + entity_model.name
         context['header_title'] = _('Cash Flow Statement: ') + entity_model.name
@@ -178,6 +201,15 @@ class FiscalYearCashFlowStatementView(DjangoLedgerSecurityMixIn,
             context['unit_model'] = get_object_or_404(entity_unit_qs,
                                                       slug__exact=unit_slug,
                                                       entity__slug__exact=self.kwargs['entity_slug'])
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            context['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
+            fund_slug = self.kwargs.get('fund_slug')
+            if fund_slug:
+                fund_qs = entity_model.fundmodel_set.all()
+                context['fund_model'] = get_object_or_404(fund_qs,
+                                                          slug__exact=fund_slug,
+                                                          entity__slug__exact=self.kwargs['entity_slug'])
+
         return context
 
 
