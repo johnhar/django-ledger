@@ -1,3 +1,5 @@
+import os
+
 from django.test import override_settings
 from django_ledger.tests.base import DjangoLedgerBaseTest
 
@@ -11,7 +13,9 @@ class FundFeatureTests(DjangoLedgerBaseTest):
         from django_ledger import settings as dl_settings
 
         # first test that the fund feature is disabled by default
-        self.assertFalse(hasattr(settings, 'DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES'))  # app's settings (i.e. dev_env in this case) doesn't override it
+        self.assertTrue(hasattr(settings, 'DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES'))  # app's settings (i.e. dev_env in this case) grabs from OS
+        self.assertEqual(settings.DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
+                         os.getenv('DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES', 'False').lower() == 'true')
         self.assertTrue(hasattr(dl_settings, 'DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES'))    # django_ledger settings file has it defined
         self.assertFalse(dl_settings.DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES)               # and the default is False
 

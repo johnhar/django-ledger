@@ -5,6 +5,15 @@ from django_ledger.tests.base import DjangoLedgerBaseTest
 
 
 class ChartOfAccountsDefaultTests(DjangoLedgerBaseTest):
+    def setUp(self) -> None:
+        super().setUp()
+        self.original_default_coa = coa_default.get_default_coa()
+
+    def tearDown(self) -> None:
+        # for these tests which modify the default COA (which persists over the tests),
+        # revert back to the old default COA
+        coa_default.set_default_coa(self.original_default_coa)
+        super().tearDown()
 
     def test_coa_default_builtin(self):
         coa_default.set_default_coa()
