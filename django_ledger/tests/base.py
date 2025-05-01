@@ -16,6 +16,7 @@ from django.utils.timezone import get_default_timezone
 from django_ledger.io.io_generator import EntityDataGenerator
 from django_ledger.models import JournalEntryModel, LedgerModel, TransactionModel, AccountModel, AccountModelQuerySet
 from django_ledger.models.entity import EntityModel, EntityModelQuerySet
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 UserModel = get_user_model()
 
@@ -117,7 +118,7 @@ class DjangoLedgerBaseTest(TestCase):
 
     @classmethod
     def get_random_entity_data(cls) -> dict:
-        return {
+        result = {
             'slug': f'a-cool-slug-{randint(10000, 99999)}',
             'name': f'Testing Inc-{randint(100000, 999999)}',
             'address_1': f'{randint(100000, 999999)} Main St',
@@ -132,13 +133,17 @@ class DjangoLedgerBaseTest(TestCase):
             'admin': cls.user_model,
             'accrual_method': next(cls.accrual_cycle)
         }
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            result['is_nonprofit'] = choice([True, False])
+        return result
 
     def get_random_entity_model(self) -> EntityModel:
         if self.ENTITY_MODEL_QUERYSET:
             return choice(self.ENTITY_MODEL_QUERYSET)
         raise ValueError('EntityModels have not been populated.')
 
-    def create_entity_model(self, use_accrual_method: bool = False, fy_start_month: int = 1) -> EntityModel:
+    def create_entity_model(self, use_accrual_method: bool = False, fy_start_month: int = 1,
+                            is_nonprofit: bool = False) -> EntityModel:
         """
         Creates a new blank EntityModel for testing purposes.
 
@@ -153,12 +158,21 @@ class DjangoLedgerBaseTest(TestCase):
         -------
         EntityModel
         """
-        return EntityModel.create_entity(
-            name='Testing Inc-{randint(100000, 999999)',
-            use_accrual_method=use_accrual_method,
-            fy_start_month=fy_start_month,
-            admin=self.user_model
-        )
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            return EntityModel.create_entity(
+                name='Testing Inc-{randint(100000, 999999)',
+                use_accrual_method=use_accrual_method,
+                fy_start_month=fy_start_month,
+                admin=self.user_model,
+                is_nonprofit=True,
+            )
+        else:
+            return EntityModel.create_entity(
+                name='Testing Inc-{randint(100000, 999999)',
+                use_accrual_method=use_accrual_method,
+                fy_start_month=fy_start_month,
+                admin=self.user_model
+            )
 
     @classmethod
     def create_entity_models(cls, save=True, n: int = 5):

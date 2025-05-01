@@ -6,6 +6,7 @@ from django.conf import settings
 
 from django_ledger.io.io_core import IOValidationError
 from django_ledger.models import EntityModel
+from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 from django_ledger.tests.base import DjangoLedgerBaseTest
 
 
@@ -186,7 +187,8 @@ class IOTest(DjangoLedgerBaseTest):
         self.assertTrue(io_digest.IO_DATA['entity_slug'], entity_model.slug)
         self.assertFalse(io_digest.IO_DATA['by_activity'])
         self.assertFalse(io_digest.IO_DATA['by_unit'])
-        self.assertFalse(io_digest.IO_DATA['by_fund'])
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            self.assertFalse(io_digest.IO_DATA['by_fund'])
         self.assertFalse(io_digest.IO_DATA['by_tx_type'])
 
         # io_digest = entity_model.digest(

@@ -830,10 +830,10 @@ class EntityModelAbstract(MP_Node,
     @classmethod
     def create_entity(cls,
                       name: str,
-                      is_nonprofit: bool,
                       use_accrual_method: bool,
                       admin: UserModel,
                       fy_start_month: int,
+                      is_nonprofit: bool = False,
                       parent_entity=None):
         """
         Convenience Method to Create a new Entity Model. This is the preferred method to create new Entities in order
