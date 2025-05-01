@@ -15,7 +15,7 @@ from django.utils.timezone import get_default_timezone
 
 from django_ledger.io.io_generator import EntityDataGenerator
 from django_ledger.models import JournalEntryModel, LedgerModel, TransactionModel, AccountModel, AccountModelQuerySet
-from django_ledger.models.entity import EntityModel, EntityModelQuerySet, UserModel
+from django_ledger.models.entity import EntityModel, EntityModelQuerySet
 
 UserModel = get_user_model()
 
@@ -62,13 +62,14 @@ class DjangoLedgerBaseTest(TestCase):
                 email=cls.USER_EMAIL,
             )
 
-        cls.FY_STARTS = list(str(i) for i in range(1, 13))
+        cls.FY_STARTS = list(range(1, 13)) # Generate a list of integers from 1 to 12
         cls.TEST_DATA = list()
         cls.CAPITAL_CONTRIBUTION = Decimal('50000.00')
         cls.ENTITY_MODEL_QUERYSET: Optional[EntityModelQuerySet] = None
 
-        cls.create_entity_models(n=cls.N)
-        cls.populate_entity_models()
+        # cls.create_entity_models(n=cls.N)
+        # cls.populate_entity_models()
+        cls.create_and_populate_entity_models(n=cls.N)
 
     @classmethod
     def get_random_date(cls, as_datetime: bool = False) -> date:
@@ -169,27 +170,82 @@ class DjangoLedgerBaseTest(TestCase):
             if save:
                 entity_model.save()
 
+    # @classmethod
+    # def populate_entity_models(cls):
+    #     entities_qs = EntityModel.objects.all()
+    #     for entity_model in entities_qs:
+    #         data_generator = EntityDataGenerator(
+    #             user_model=cls.user_model,
+    #             entity_model=entity_model,
+    #             start_dttm=cls.START_DATE,
+    #             capital_contribution=cls.CAPITAL_CONTRIBUTION,
+    #             days_forward=cls.DAYS_FORWARD,
+    #             tx_quantity=cls.TX_QUANTITY
+    #         )
+    #         cls.logger.info(f'Populating Entity {entity_model.name}...')
+    #
+    #         # sometimes the random data is invalid, e.g. zero-value estimate, and this may fail. Try again
+    #         try_to_populate = True
+    #         while try_to_populate:
+    #             try:
+    #                 data_generator.populate_entity()
+    #             except ValidationError as e:
+    #                 cls.logger.warning(f"Encountered error while populating Entity {entity_model.name}.  Trying again. Error: {e}")
+    #                 pass    # try again
+    #             else:
+    #                 try_to_populate = False
+    #
+    #     cls.ENTITY_MODEL_QUERYSET = entities_qs
+
     @classmethod
-    def populate_entity_models(cls):
-        entities_qs = EntityModel.objects.all()
-        for entity_model in entities_qs:
-            data_generator = EntityDataGenerator(
-                user_model=cls.user_model,
-                entity_model=entity_model,
-                start_dttm=cls.START_DATE,
-                capital_contribution=cls.CAPITAL_CONTRIBUTION,
-                days_forward=cls.DAYS_FORWARD,
-                tx_quantity=cls.TX_QUANTITY
-            )
-            cls.logger.info(f'Populating Entity {entity_model.name}...')
-            data_generator.populate_entity()
-        cls.ENTITY_MODEL_QUERYSET = entities_qs
+    def create_and_populate_entity_models(cls, save=True, n: int = 5):
+        """
+        Sometimes the random data is invalid, e.g. zero-value estimate, and popluation of the entity will fail.
+        The easiest way to handle this is to delete the entity and start again (for this entity).  So,
+        we have to create & populate one entity at a time instead of separate steps.
+        """
+        cls.refresh_test_data(n)
+        for ent_data in cls.TEST_DATA:
+            try_again = True
+            while try_again:
+                # create the entity
+                entity_model = EntityModel.add_root(**ent_data)
+                entity_model.admin = cls.user_model
+                entity_model.clean()
+                if save:
+                    entity_model.save()
+
+                # create the data generator for this entity
+                data_generator = EntityDataGenerator(
+                    user_model=cls.user_model,
+                    entity_model=entity_model,
+                    start_dttm=cls.START_DATE,
+                    capital_contribution=cls.CAPITAL_CONTRIBUTION,
+                    days_forward=cls.DAYS_FORWARD,
+                    tx_quantity=cls.TX_QUANTITY
+                )
+                cls.logger.info(f'Populating Entity {entity_model.name}...')
+
+                # try populating the entity. Delete the entity and restart if we run into a problem.
+                try:
+                    data_generator.populate_entity()
+                except ValidationError as e:
+                    cls.logger.warning(f"Encountered rare randomization error while populating Entity.  Trying again. Error: {e}")
+                    entity_model.delete()
+                except Exception as e:
+                    raise RuntimeError(f"Encountered unexpected error while populating Entity {entity_model.name}.  "
+                                       f"Review if this should be a reason to retry population of entity. Error: {e}")
+                else:
+                    try_again = False
+
+        # update the global entity queryset
+        cls.ENTITY_MODEL_QUERYSET = EntityModel.objects.all()
 
     def get_random_draft_date(self):
         return self.START_DATE + timedelta(days=randint(0, 365))
 
-    def get_random_account(self,
-                           entity_model: EntityModel,
+    @staticmethod
+    def get_random_account(entity_model: EntityModel,
                            balance_type: Literal['credit', 'debit', None] = None,
                            active: bool = True,
                            locked: bool = False) -> AccountModel:
@@ -200,8 +256,8 @@ class DjangoLedgerBaseTest(TestCase):
         account_qs = account_qs.filter(balance_type=balance_type) if balance_type else account_qs
         return choice(account_qs)
 
-    def get_random_ledger(self,
-                          entity_model: EntityModel,
+    @staticmethod
+    def get_random_ledger(entity_model: EntityModel,
                           qs_limit: int = 100,
                           posted: bool = True) -> LedgerModel:
         """
