@@ -208,6 +208,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
 
         return context
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, po_pk, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
@@ -219,6 +220,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
             )
         return super(PurchaseOrderModelUpdateView, self).get(request, entity_slug, po_pk, *args, **kwargs)
 
+    # noinspection PyMethodOverriding
     def post(self, request, entity_slug, *args, **kwargs):
         if self.action_update_items:
 
@@ -339,7 +341,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                                          f'All PO items must be billed before marking'
                                          f' PO: {po_model.po_number} as fulfilled.',
                                          extra_tags='is-danger')
-                    return self.get(self.request)
+                    return self.get(self.request, entity_slug=self.kwargs['entity_slug'], po_pk=po_model.uuid)
 
                 else:
                     if not all([i.bill_model.is_paid() for i in po_items_qs]):
@@ -348,7 +350,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                                              f'All bills must be paid before marking'
                                              f' PO: {po_model.po_number} as fulfilled.',
                                              extra_tags='is-success')
-                        return self.get(self.request)
+                        return self.get(self.request, entity_slug=self.kwargs['entity_slug'], po_pk=po_model.uuid)
 
                 po_items_qs.update(po_item_status=ItemTransactionModel.STATUS_RECEIVED)
 

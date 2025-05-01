@@ -358,6 +358,7 @@ class IOCursor:
 
         results = dict()
         for ledger_model, tr_items in instructions.items():
+            # noinspection PyProtectedMember
             if ledger_model._state.adding:
                 ledger_model.save()
             je_txs = [t.to_dict() for t in tr_items]
