@@ -1,6 +1,7 @@
 import warnings
 from datetime import date
 from random import choice
+from unittest import skip
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -17,7 +18,7 @@ UserModel = get_user_model()
 
 class EntityModelTests(DjangoLedgerBaseTest):
 
-    def setUp(self) -> None:
+    def setUp(self):
         super(EntityModelTests, self).setUp()
 
         self.ENTITY_URL_PATTERN = {
@@ -303,3 +304,11 @@ class EntityModelTests(DjangoLedgerBaseTest):
             home_url = reverse('django_ledger:home')
             response = self.CLIENT.get(home_url)
             self.assertNotContains(response, text=entity_model.slug)
+
+    @skip("Skip test_populate_entity() - only run (comment out this line) if having problems with populate_entity().")
+    def test_populate_entity(self):
+        n = 5
+        for i in range(n):
+            self.logger.info(f"test_populate_entity: {i + 1} of {n}")
+            self.create_and_populate_entity_models()
+
