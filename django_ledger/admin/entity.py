@@ -126,7 +126,8 @@ class EntityModelAdmin(ModelAdmin):
             return qs
         return qs.for_user(user_model=request.user)
 
-    def add_ledger_link(self, obj):
+    @staticmethod
+    def add_ledger_link(obj):
         add_ledger_url = reverse('admin:django_ledger_ledgermodel_add')
         return format_html('<a class="addlink" href="{url}?entity_slug={slug}">Add Ledger</a>',
                            url=add_ledger_url,
@@ -180,7 +181,8 @@ class EntityModelAdmin(ModelAdmin):
 
     dashboard_link.short_description = 'Dashboard'
 
-    def add_code_of_accounts(self, request, queryset):
+    @staticmethod
+    def add_code_of_accounts(request, queryset):
         lt = get_localtime().isoformat()
         for entity_model in queryset:
             entity_model.create_chart_of_accounts(
@@ -189,7 +191,8 @@ class EntityModelAdmin(ModelAdmin):
                 assign_as_default=False
             )
 
-    def populate_random_data(self, request, queryset):
+    @staticmethod
+    def populate_random_data(request, queryset):
         for entity_model in queryset:
             start_date = get_localtime() - timedelta(days=180)
             entity_model.populate_random_data(

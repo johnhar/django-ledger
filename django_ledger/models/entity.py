@@ -1300,10 +1300,13 @@ class EntityModelAbstract(MP_Node,
             Selects only locked accounts.
         order_by: list of strings.
             Optional list of fields passed to the order_by QuerySet method.
+        return_coa_model: bool, Optional
+            If True, the COA model is also returned (see Returns).
 
         Returns
         -------
-        AccountModelQuerySet
+        AccountModelQuerySet or Tuple[ChartOfAccountModel, AccountModelQuerySet]
+            The ChartOfAccountModel is returned if return_coa_model is True.
             The AccountModelQuerySet of the assigned default CoA.
         """
 
@@ -2602,6 +2605,7 @@ class EntityModelAbstract(MP_Node,
                 2. The recorded inventory on Balance Sheet.
         """
         ItemTransactionModel = lazy_loader.get_item_transaction_model()
+        # noinspection PyShadowingNames
         ItemModel = lazy_loader.get_item_model()
 
         counted_qs: ItemTransactionModelQuerySet = ItemTransactionModel.objects.inventory_count(entity_slug=self.slug)

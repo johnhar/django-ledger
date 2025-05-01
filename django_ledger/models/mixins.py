@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import timedelta, date, datetime
 from decimal import Decimal
 from itertools import groupby
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, Tuple
 from uuid import UUID
 
 from django.conf import settings
@@ -991,7 +991,8 @@ class PaymentTermsMixIn(models.Model):
             f'Must implement get_terms_start_date() for {self.__class__.__name__}'
         )
 
-    def get_terms_net_90_plus(self) -> int:
+    @staticmethod
+    def get_terms_net_90_plus() -> int:
         """
         Determines the number of days for 90+ days terms of payment.
 
@@ -1246,7 +1247,8 @@ class ItemizeMixIn(models.Model):
         """
         raise NotImplementedError()
 
-    def get_itemtxs_data(self, queryset=None, aggregate_on_db: bool = False, lazy_agg: bool = False):
+    def get_itemtxs_data(self, queryset=None, aggregate_on_db: bool = False, lazy_agg: bool = False) -> \
+            Tuple[Dict, Dict]:
         """
         Fetches the ItemTransactionModelQuerySet associated with the model.
 
@@ -1266,7 +1268,8 @@ class ItemizeMixIn(models.Model):
         """
         raise NotImplementedError()
 
-    def validate_itemtxs(self, itemtxs):
+    @staticmethod
+    def validate_itemtxs(itemtxs):
         """
         Validates the provided item transaction list.
 

@@ -24,7 +24,8 @@ class BillNode(DjangoObjectType):
 class Bill_list_Query(graphene.ObjectType):
     all_bills = DjangoFilterConnectionField(BillNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_bills(self, info, slug_name, **kwargs):
+    @staticmethod
+    def resolve_all_bills(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return BillModel.objects.for_entity(
                 entity_slug=slug_name,

@@ -180,6 +180,10 @@ class JournalEntryModelTXSDetailView(JournalEntryModelModelBaseView, DetailView)
     }
     context_object_name = 'journal_entry'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.prefetch_related('transactionmodel_set', 'transactionmodel_set__account')

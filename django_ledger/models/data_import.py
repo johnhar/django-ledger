@@ -1030,6 +1030,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         """
         ready_to_import = getattr(self, 'ready_to_import')
         if (not self.has_activity() and ready_to_import) or force_update:
+            # noinspection PyShadowingNames
             JournalEntryModel = lazy_loader.get_journal_entry_model()
             role_set = self.get_import_role_set()
             if role_set is not None:
@@ -1072,6 +1073,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         """
         activity = self.get_prospect_je_activity_try(raise_exception=False)
         if activity is not None:
+            # noinspection PyShadowingNames
             JournalEntryModel = lazy_loader.get_journal_entry_model()
             return JournalEntryModel.MAP_ACTIVITIES[activity]
 

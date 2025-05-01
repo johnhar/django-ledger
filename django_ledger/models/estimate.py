@@ -13,7 +13,7 @@ to produce more specific financial reports associated with a specific scope of w
 from datetime import date
 from decimal import Decimal
 from string import ascii_uppercase, digits
-from typing import Union, Optional, List, Dict
+from typing import Union, Optional, List, Dict, Tuple
 from uuid import uuid4, UUID
 
 from django.contrib.auth import get_user_model
@@ -617,6 +617,9 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         ----------
         commit: bool
             Commits transaction into current EstimateModel instance.
+        raise_exception: bool
+            If the EstimateModel cannot be marked as Draft, this method will raise an EstimateModelValidationError.
+            Otherwise, it will just return.  Default is True.
         """
         if not self.can_draft():
             if raise_exception:
@@ -689,8 +692,11 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         itemtxs_qs: ItemTransactionModelQuerySet
             Optional, pre-fetched ItemTransactionModelQuerySet. Avoids additional DB query.
             Validated if provided.
-        date_in_review: date
+        date_in_review: date, Optional
             Optional date when EstimateModel instance is In Review. Defaults to localdate().
+        raise_exception: bool, Optional
+            If the EstimateModel cannot be marked as In Review, this method will raise an EstimateModelValidationError.
+            Else it will just return. Default is True.
         """
         if not self.can_review():
             if raise_exception:
@@ -777,6 +783,9 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             Commits transaction into current EstimateModel instance.
         date_approved: date
             Optional date when EstimateModel instance is Approved. Defaults to localdate().
+        raise_exception: bool, Optional
+            If the EstimateModel cannot be marked as Approved, this method will raise an EstimateModelValidationError.
+            Otherwise, it will just return.  Default is True.
         """
         if not self.can_approve():
             if raise_exception:
@@ -853,6 +862,9 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             Commits transaction into current EstimateModel instance.
         date_completed: date
             Optional date when EstimateModel instance is completed. Defaults to localdate().
+        raise_exception: bool, Optional
+            If the EstimateModel cannot be marked as completed, this method will raise an EstimateModelValidationError.
+            Otherwise, it will just return. Default is True.
         """
         if not self.can_complete():
             if raise_exception:
@@ -930,6 +942,9 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             Commits transaction into current EstimateModel instance.
         date_canceled: date
             Optional date when EstimateModel instance is canceled. Defaults to localdate().
+        raise_exception: bool, Optional
+            If the EstimateModel cannot be marked as canceled, this method will raise an EstimateModelValidationError.
+            Otherwise, it will just return. Default is True.
         """
         if not self.can_cancel():
             if raise_exception:
@@ -1006,6 +1021,9 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             Commits transaction into current EstimateModel instance.
         date_void: date
             Optional date when EstimateModel instance is void. Defaults to localdate().
+        raise_exception: bool, Optional
+            If the EstimateModel cannot be marked as void, this method will raise an EstimateModelValidationError.
+            Otherwise, it will just return. Default is True.
         """
         if not self.can_void():
             if raise_exception:
@@ -1116,7 +1134,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
     def get_itemtxs_data(self,
                          queryset: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
                          aggregate_on_db: bool = False,
-                         lazy_agg: bool = False):
+                         lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, dict]:
 
         """
         Returns all ItemTransactionModels associated with the EstimateModel and a total aggregate.
@@ -1126,10 +1144,14 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         queryset: ItemTransactionModelQuerySet
             ItemTransactionModelQuerySet to use. Avoids additional DB query if provided.
             Validated if provided.
+        aggregate_on_db: bool
+            If True, performs aggregation at the DB layer. Defaults to False.
+        lazy_agg: bool
+            If True, performs queryset aggregation metrics. Defaults to False.        Returns
 
         Returns
         -------
-        ItemTransactionModelQuerySet
+        A tuple: ItemTransactionModelQuerySet, aggregation metrics dict (None)
         """
         if not queryset:
             queryset = self.itemtransactionmodel_set.select_related('item_model').all()

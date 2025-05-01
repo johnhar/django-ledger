@@ -550,9 +550,10 @@ def transactionmodel_presave(instance: TransactionModel, **kwargs):
     kwargs : dict
         Additional keyword arguments, such as the optional `bypass_account_state`.
 
-    Validations
-    -----------
+    Notes
+    -----
     The function performs the following validations:
+
     1. **Account Transactionality**:
        If the `bypass_account_state` flag is not provided or set to `False`,
        it verifies whether the associated account can process transactions
@@ -579,8 +580,9 @@ def transactionmodel_presave(instance: TransactionModel, **kwargs):
           preventing modification of any related transactions. The error message
           describes the locked journal entry constraint.
 
-    Example
-    -------
+    Examples
+    --------
+
     ```python
     instance = TransactionModel(...)
     try:

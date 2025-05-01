@@ -27,7 +27,8 @@ class VendorNode(DjangoObjectType):
 class VendorsQuery(graphene.ObjectType):
     all_vendors = DjangoFilterConnectionField(VendorNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_vendors(self, info, slug_name, **kwargs):
+    @staticmethod
+    def resolve_all_vendors(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return VendorModel.objects.for_entity(
                 entity_slug=slug_name,

@@ -446,6 +446,7 @@ def modal_action(context, model, http_method: str = 'post', entity_slug: str = N
     if not entity_slug:
         entity_slug = context['view'].kwargs['entity_slug']
     action_url = model.get_mark_as_paid_url(entity_slug=entity_slug)
+    # noinspection PyProtectedMember
     return {
         'object': model,
         'action_url': action_url,

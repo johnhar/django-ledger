@@ -29,7 +29,8 @@ class EntityList(DjangoObjectType):
 class CustomerQuery(graphene.ObjectType):
     all_customers = DjangoFilterConnectionField(CustomerNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_customers(self, info, slug_name, **kwargs):
+    @staticmethod
+    def resolve_all_customers(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             CustomerModel.objects.for_entity(
                 entity_slug=slug_name,

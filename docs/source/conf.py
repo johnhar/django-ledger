@@ -39,6 +39,7 @@ copy(src=BASE_DIR_PATH.joinpath('README.md'), dst=BASE_DIR_PATH.joinpath('docs/s
 # -- Project information -----------------------------------------------------
 
 project = 'Django Ledger'
+# noinspection PyShadowingBuiltins
 copyright = '2025, EDMA Group Inc'
 author = 'Miguel Sanda'
 

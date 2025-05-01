@@ -142,6 +142,10 @@ class EstimateModelUpdateView(DjangoLedgerSecurityMixIn, EstimateModelModelViewQ
 
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_form_class(self):
         estimate_model: EstimateModel = self.object
         if estimate_model.is_draft():

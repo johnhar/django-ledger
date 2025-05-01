@@ -26,7 +26,8 @@ class TransactionsQuery(graphene.ObjectType):
         pk_je=graphene.UUID(),
         pk_ledger=graphene.UUID())
 
-    def resolve_all_transactions(self, info, slug_name, pk_je, pk_ledger, **kwargs):
+    @staticmethod
+    def resolve_all_transactions(info, slug_name, pk_je, pk_ledger, **kwargs):
         if info.context.user.is_authenticated:
             return TransactionModel.objects.for_entity(
                 entity_slug=slug_name,

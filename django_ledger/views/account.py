@@ -114,8 +114,8 @@ class AccountModelCreateView(BaseAccountModelBaseView, CreateView):
             'coa_model': self.get_coa_model(),
         }
 
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         coa_model = self.get_coa_model()
         context['coa_model'] = coa_model
         context['header_subtitle'] = f'CoA: {coa_model.name}'

@@ -553,6 +553,9 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         ----------
         commit: bool
             If True, saves the LedgerModel instance instantly. Defaults to False.
+        raise_exception: bool
+            If True, raises LedgerModelValidationError if un-locking not allowed.
+            Otherwise, just return.  Default is True.
         """
         if not self.can_unlock():
             if raise_exception:

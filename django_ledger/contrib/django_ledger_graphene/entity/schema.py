@@ -63,32 +63,39 @@ class EntityModelQuery(graphene.ObjectType):
         return EntityModel.objects.none()
 
     # list ....
-    def resolve_entity_model_list_all(self, info, **kwargs):
+    @staticmethod
+    def resolve_entity_model_list_all(info, **kwargs):
         return EntityModelQuery.get_base_queryset(info)
 
-    def resolve_entity_model_list_visible(self, info, **kwargs):
+    @staticmethod
+    def resolve_entity_model_list_visible(info, **kwargs):
         qs = EntityModelQuery.get_base_queryset(info)
         return qs.visible()
 
-    def resolve_entity_model_list_hidden(self, info, **kwargs):
+    @staticmethod
+    def resolve_entity_model_list_hidden(info, **kwargs):
         qs = EntityModelQuery.get_base_queryset(info)
         return qs.hidden()
 
-    def resolve_entity_model_list_managed(self, info, **kwargs):
+    @staticmethod
+    def resolve_entity_model_list_managed(info, **kwargs):
         qs: EntityModelQuerySet = EntityModelQuery.get_base_queryset(info)
         user_model = info.context.resource_owner
         return qs.filter(managers__in=[user_model])
 
-    def resolve_entity_model_list_is_admin(self, info, **kwargs):
+    @staticmethod
+    def resolve_entity_model_list_is_admin(info, **kwargs):
         qs: EntityModelQuerySet = EntityModelQuery.get_base_queryset(info)
         user_model = info.context.resource_owner
         return qs.filter(admin=user_model)
 
     # detail...
-    def resolve_entity_model_detail_by_slug(self, info, slug, **kwargs):
+    @staticmethod
+    def resolve_entity_model_detail_by_slug(info, slug, **kwargs):
         qs: EntityModelQuerySet = EntityModelQuery.get_base_queryset(info)
         return qs.select_related('default_coa').get(slug__exact=slug)
 
-    def resolve_entity_model_detail_by_uuid(self, info, uuid, **kwargs):
+    @staticmethod
+    def resolve_entity_model_detail_by_uuid(info, uuid, **kwargs):
         qs: EntityModelQuerySet = EntityModelQuery.get_base_queryset(info)
         return qs.select_related('default_coa').get(uuid__exact=uuid)

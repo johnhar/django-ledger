@@ -22,7 +22,8 @@ class JournalEntryQuery(graphene.ObjectType):
         JournalEntryNode, slug_name=graphene.String(
             required=True), pk_ledger=graphene.UUID())
 
-    def resolve_all_journal_entry(self, info, slug_name, pk_ledger, **kwargs):
+    @staticmethod
+    def resolve_all_journal_entry(info, slug_name, pk_ledger, **kwargs):
         if info.context.user.is_authenticated:
             sort = info.context.GET.get('sort')
             if not sort:

@@ -172,6 +172,10 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
 
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_form_class(self):
         invoice_model: InvoiceModel = self.object
 

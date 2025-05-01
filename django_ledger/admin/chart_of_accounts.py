@@ -117,7 +117,8 @@ class ChartOfAccountsModelAdmin(ModelAdmin):
     class Meta:
         model = ChartOfAccountModel
 
-    def entity_name(self, obj):
+    @staticmethod
+    def entity_name(obj):
         return obj.entity.name
 
     def get_queryset(self, request):

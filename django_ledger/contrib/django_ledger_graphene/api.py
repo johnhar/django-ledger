@@ -9,7 +9,7 @@ class Query(
     # ChartOfAccountsModelQuery
     # CustomerQuery,
     # Bill_list_Query,
-    # Accountlist_Query,
+    # AccountListQuery,
     # Bank_account_Query        ,
     # ChartOfAccountsQuery,
     # UnitOfMeasureQuery,

@@ -154,6 +154,10 @@ class DataImportJobDetailView(ImportJobModelViewBaseView, DetailView):
     form_class = StagedTransactionModelFormSet
     http_method_names = ['get', 'post']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_form_kwargs(self):
         return {
             'entity_model': self.get_authorized_entity_instance(),

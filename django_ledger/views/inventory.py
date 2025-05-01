@@ -61,6 +61,10 @@ class InventoryRecountView(DjangoLedgerSecurityMixIn, DetailView):
     http_method_names = ['get']
     slug_url_kwarg = 'entity_slug'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_queryset(self):
         if not self.queryset:
             self.queryset = EntityModel.objects.for_user(

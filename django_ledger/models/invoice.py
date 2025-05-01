@@ -1715,6 +1715,7 @@ class InvoiceModelAbstract(
             An instance of EntityStateModel
         """
         EntityStateModel = lazy_loader.get_entity_state_model()
+        # noinspection PyShadowingNames
         EntityModel = lazy_loader.get_entity_model()
         entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
         fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
@@ -1734,6 +1735,7 @@ class InvoiceModelAbstract(
             state_model.refresh_from_db()
             return state_model
         except ObjectDoesNotExist:
+            # noinspection PyShadowingNames
             EntityModel = lazy_loader.get_entity_model()
             entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
             fy_key = entity_model.get_fy_for_date(dt=self.date_draft)

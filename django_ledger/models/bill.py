@@ -227,20 +227,20 @@ class BillModelManager(Manager):
         May pass an instance of EntityModel or a String representing the EntityModel slug.
 
         Parameters
-        __________
+        ----------
         entity_slug: str or EntityModel
             The entity slug or EntityModel used for filtering the QuerySet.
         user_model
             Logged in and authenticated django UserModel instance.
 
         Examples
-        ________
-            >>> request_user = request.user
-            >>> slug = kwargs['entity_slug'] # may come from request kwargs
-            >>> bill_model_qs = BillModel.objects.for_entity(user_model=request_user, entity_slug=slug)
+        --------
+            request_user = request.user
+            slug = kwargs['entity_slug'] # may come from request kwargs
+            bill_model_qs = BillModel.objects.for_entity(user_model=request_user, entity_slug=slug)
 
         Returns
-        _______
+        -------
         BillModelQuerySet
             Returns a BillModelQuerySet with applied filters.
         """
@@ -555,6 +555,9 @@ class BillModelAbstract(
             Optional pre-fetched ItemModelQueryset to use. Avoids additional DB query if provided.
         aggregate_on_db: bool
             If True, performs aggregation of ItemsTransactions in the DB resulting in one additional DB query.
+        lazy_agg: bool
+            If True, returns a dict of the items and the result of the aggregation, else return None.
+
         Returns
         -------
         A tuple: ItemTransactionModelQuerySet, dict
@@ -1417,6 +1420,7 @@ class BillModelAbstract(
 
         if commit:
             self.save()
+            # noinspection PyShadowingNames
             ItemTransactionModel = lazy_loader.get_item_transaction_model()
             itemtxs_qs.filter(
                 po_model_id__isnull=False
@@ -1814,6 +1818,7 @@ class BillModelAbstract(
             An instance of EntityStateModel
         """
         EntityStateModel = lazy_loader.get_entity_state_model()
+        # noinspection PyShadowingNames
         EntityModel = lazy_loader.get_entity_model()
         entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
         fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
@@ -1834,6 +1839,7 @@ class BillModelAbstract(
             state_model.refresh_from_db()
             return state_model
         except ObjectDoesNotExist:
+            # noinspection PyShadowingNames
             EntityModel = lazy_loader.get_entity_model()
             entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
             fy_key = entity_model.get_fy_for_date(dt=self.date_draft)

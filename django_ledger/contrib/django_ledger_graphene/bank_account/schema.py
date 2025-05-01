@@ -23,7 +23,8 @@ class BankaccountNode(DjangoObjectType):
 class Bank_account_Query(graphene.ObjectType):
     all_bankaccounts = DjangoFilterConnectionField(BankaccountNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_bankaccounts(self, info, slug_name, **kwargs):
+    @staticmethod
+    def resolve_all_bankaccounts(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return BankAccountModel.objects.for_entity(
             entity_slug=slug_name,

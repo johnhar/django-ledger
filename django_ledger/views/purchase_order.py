@@ -174,6 +174,10 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
     }
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_context_data(self, itemtxs_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         po_model: PurchaseOrderModel = self.object
@@ -208,6 +212,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
 
         return context
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, po_pk, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
@@ -219,6 +224,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
             )
         return super(PurchaseOrderModelUpdateView, self).get(request, entity_slug, po_pk, *args, **kwargs)
 
+    # noinspection PyMethodOverriding
     def post(self, request, entity_slug, *args, **kwargs):
         if self.action_update_items:
 
@@ -314,7 +320,8 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                            'po_pk': po_pk
                        })
 
-    def get_po_itemtxs_qs(self, po_model: PurchaseOrderModel):
+    @staticmethod
+    def get_po_itemtxs_qs(po_model: PurchaseOrderModel):
         return po_model.itemtransactionmodel_set.select_related('bill_model', 'po_model').order_by('created')
 
     def form_valid(self, form: BasePurchaseOrderModelUpdateForm):
@@ -401,6 +408,10 @@ class PurchaseOrderModelDeleteView(DjangoLedgerSecurityMixIn,
         'hide_menu': True,
         'header_subtitle_icon': 'uil:bill'
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)

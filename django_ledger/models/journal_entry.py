@@ -41,6 +41,7 @@ from django.urls import reverse
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
+from django_ledger.io import roles
 from django_ledger.io.io_core import get_localtime
 from django_ledger.io.roles import (
     ASSET_CA_CASH, GROUP_CFS_FIN_DIVIDENDS, GROUP_CFS_FIN_ISSUING_EQUITY,
@@ -59,13 +60,12 @@ from django_ledger.models.signals import (
     journal_entry_posted,
     journal_entry_unposted
 )
-from django_ledger.models.transactions import TransactionModelQuerySet, TransactionModel
+from django_ledger.models.transactions import TransactionModelQuerySet
 from django_ledger.settings import (
     DJANGO_LEDGER_JE_NUMBER_PREFIX,
     DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING,
     DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX
 )
-from django_ledger.io import roles
 
 
 class JournalEntryValidationError(ValidationError):
@@ -495,6 +495,9 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         entity_model : Union[EntityModel, str, UUID]
             The entity to validate against. It can either be an instance of the
             `EntityModel`, a string representation of a UUID, or a UUID object.
+        raise_exception : bool, Optional
+            If `True`, raises an exception if the validation fails.
+            Otherwise, it just returns False.  Default is True (to raise the exception).
 
         Returns
         -------
@@ -664,12 +667,15 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             return is_valid
         return True
 
-    def is_txs_qs_coa_valid(self, txs_qs: TransactionModelQuerySet, raise_exception: bool = True) -> bool:
+    @staticmethod
+    def is_txs_qs_coa_valid(txs_qs: TransactionModelQuerySet, raise_exception: bool = True) -> bool:
         """
         Validates that all transactions in the QuerySet are associated with the same Chart of Accounts (COA).
 
         Parameters:
             txs_qs (TransactionModelQuerySet): A QuerySet containing transactions to validate.
+            raise_exception (bool): Whether to raise a JournalEntryValidationError if the validation fails.
+                Otherwise, it just returns False.  Default is True (raise the exception).
 
         Returns:
             bool: True if all transactions have the same Chart of Accounts, otherwise False.
@@ -1054,6 +1060,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         else:
             self.is_txs_qs_valid(txs_qs)
 
+        # noinspection PyShadowingNames
         roles = {tx.account.role for tx in txs_qs}
 
         if exclude_cash_role:
@@ -1769,6 +1776,7 @@ class JournalEntryModel(JournalEntryModelAbstract):
 
 
 def journalentrymodel_presave(instance: JournalEntryModel, **kwargs):
+    # noinspection PyProtectedMember
     if instance._state.adding:
         # cannot add journal entries to a locked ledger...
         if instance.ledger_is_locked():

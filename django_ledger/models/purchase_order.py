@@ -373,7 +373,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
     def get_itemtxs_data(self,
                          queryset: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
                          aggregate_on_db: bool = False,
-                         lazy_agg: bool = False) -> Tuple:
+                         lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, Dict]:
         """
         Fetches the PurchaseOrderModel Items and aggregates the QuerySet.
 
@@ -384,10 +384,12 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
             Validated if provided.
         aggregate_on_db: bool
             If True, performs aggregation of ItemsTransactions in the DB resulting in one additional DB query.
+        lazy_agg: bool
+            If True, performs queryset aggregation metrics. Defaults to False.
 
         Returns
         -------
-        A tuple: ItemTransactionModelQuerySet, dict
+        A tuple: ItemTransactionModelQuerySet, aggregation metrics dict
         """
         if not queryset:
             queryset = self.itemtransactionmodel_set.all().select_related('bill_model', 'item_model')
@@ -1158,6 +1160,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
             An instance of EntityStateModel
         """
         EntityStateModel = lazy_loader.get_entity_state_model()
+        # noinspection PyShadowingNames
         EntityModel = lazy_loader.get_entity_model()
         entity_model = EntityModel.objects.get(uuid__exact=self.entity_id)
         fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
@@ -1177,6 +1180,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
             state_model.refresh_from_db()
             return state_model
         except ObjectDoesNotExist:
+            # noinspection PyShadowingNames
             EntityModel = lazy_loader.get_entity_model()
             entity_model = EntityModel.objects.get(uuid__exact=self.entity_id)
             fy_key = entity_model.get_fy_for_date(dt=self.date_draft)

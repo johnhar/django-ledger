@@ -300,6 +300,10 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
     http_method_names = ['get', 'post']
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_form(self, form_class=None):
         form_class = self.get_form_class()
         entity_model: EntityModel = self.get_authorized_entity_instance()

@@ -152,13 +152,13 @@ class QuarterlyReportMixIn(YearMixin, ContextFromToDateMixin, EntityModelFiscalP
         context['has_quarter'] = True
         return context
 
-    def get_next_quarter(self, quarter) -> int:
-        if quarter != 4:
-            return quarter + 1
+    @staticmethod
+    def get_next_quarter(quarter) -> int:
+        return quarter + 1 if quarter != 4 else 1
 
-    def get_previous_quarter(self, quarter) -> int:
-        if quarter != 1:
-            return quarter - 1
+    @staticmethod
+    def get_previous_quarter(quarter) -> int:
+        return quarter - 1 if quarter != 1 else 4
 
 
 class MonthlyReportMixIn(YearlyReportMixIn, ContextFromToDateMixin, MonthMixin):
@@ -294,9 +294,9 @@ class SuccessUrlNextMixIn:
         return self.request.GET.get('next') is not None
 
     def get_success_url(self):
-        next = self.request.GET.get('next')
-        if next:
-            return next
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
         return reverse('django_ledger:home')
 
 
@@ -563,6 +563,10 @@ class PDFReportMixIn:
         PDFReportEnum.IS: 'get_income_statement',
         PDFReportEnum.CFS: 'get_cash_flow_statement',
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
 
     def get_pdf_func_name(self):
         if not self.pdf_report_type:

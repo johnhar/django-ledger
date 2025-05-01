@@ -345,6 +345,8 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
         ----------
         raise_exception : bool, optional
                 If set to True, it will raise a ChartOfAccountsModelValidationError if the `self.slug` is already set.
+        commit : bool, optional
+                If set to True, it will commit the changes to the database. Default is False.
 
         Returns
         -------
@@ -854,5 +856,6 @@ def chartofaccountsmodel_presave(instance: ChartOfAccountModelAbstract, **kwargs
 
 @receiver(post_save, sender=ChartOfAccountModel)
 def chartofaccountsmodel_postsave(instance: ChartOfAccountModelAbstract, **kwargs):
+    # noinspection PyProtectedMember
     if instance._state.adding:
         instance.configure()

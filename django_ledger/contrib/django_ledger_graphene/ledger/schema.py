@@ -19,7 +19,8 @@ class LedgerQuery(graphene.ObjectType):
     all_ledger = DjangoFilterConnectionField(
         LedgerNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_vendors(self, info, slug_name, **kwargs):
+    @staticmethod
+    def resolve_all_vendors(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             sort = info.context.GET.get('sort')
             if not sort:

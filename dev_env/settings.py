@@ -41,6 +41,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'dev_env.urls'
 
+# noinspection PyUnresolvedReferences
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

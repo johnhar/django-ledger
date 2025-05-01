@@ -37,7 +37,9 @@ from django_ledger.models import (EntityModel, TransactionModel, VendorModel, Cu
 from django_ledger.utils import (generate_random_sku, generate_random_upc, generate_random_item_id)
 
 try:
+    # noinspection PyUnresolvedReferences
     from faker import Faker
+    # noinspection PyUnresolvedReferences
     from faker.providers import company, address, phone_number, bank
 
     FAKER_IMPORTED = True
