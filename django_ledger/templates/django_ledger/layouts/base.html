@@ -3,7 +3,7 @@
 {% load cache %}
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,6 +39,7 @@
     <script src="{% static 'django_ledger/bundle/djetler.bundle.js' %}"></script>
 
     <script>
+        import * as djLedger from "../../../../assets/src/entry";
         {% if entity_slug %}
             let entitySlug = "{{ view.kwargs.entity_slug }}"
         {% endif %}
