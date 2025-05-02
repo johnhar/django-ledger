@@ -103,8 +103,8 @@ class EntityModelManager(MP_NodeManager):
 
     Examples
     ________
-    >>> user = request.user
-    >>> entity_model_qs = EntityModel.objects.for_user(user_model=user)
+        user = request.user
+        entity_model_qs = EntityModel.objects.for_user(user_model=user)
 
     """
 
@@ -188,6 +188,8 @@ class EntityModelFiscalPeriodMixIn:
                 entity = obj.entity
             elif isinstance(obj, AccountModel):
                 entity = obj.coa_model.entity
+            else:
+                raise TypeError(f"object {obj} is not an entity or has an entity model associated with it.")
 
             fy: int = getattr(entity, 'fy_start_month')
 
@@ -447,11 +449,11 @@ class EntityModelClosingEntryMixIn:
                                  user_model: Optional[UserModel] = None,
                                  closing_entry_model=None,
                                  **kwargs: Dict) -> Tuple:
-        ClosingEntryModel = lazy_loader.get_closing_entry_model()
-        ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
+        _ClosingEntryModel = lazy_loader.get_closing_entry_model()
+        _ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
 
         if not closing_entry_model:
-            closing_entry_model = ClosingEntryModel(
+            closing_entry_model = _ClosingEntryModel(
                 entity_model=self,
                 closing_date=to_date
             )
@@ -471,7 +473,7 @@ class EntityModelClosingEntryMixIn:
         ce_data = io_digest.get_closing_entry_data()
 
         ce_txs_list = [
-            ClosingEntryTransactionModel(
+            _ClosingEntryTransactionModel(
                 closing_entry_model=closing_entry_model,
                 account_model_id=ce['account_uuid'],
                 unit_model_id=ce['unit_uuid'],
@@ -510,8 +512,8 @@ class EntityModelClosingEntryMixIn:
 
     # ---> Closing Entry QuerySet <---
     def get_closing_entry_queryset_for_date(self, closing_date: date):
-        ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
-        return ClosingEntryTransactionModel.objects.for_entity(
+        _ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
+        return _ClosingEntryTransactionModel.objects.for_entity(
             entity_slug=self,
         ).filter(closing_entry_model__closing_date__exact=closing_date)
 
@@ -551,8 +553,8 @@ class EntityModelClosingEntryMixIn:
         if closing_entry_model is not None:
             closing_entry_model.save()
 
-        ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
-        return closing_entry_model, ClosingEntryTransactionModel.objects.bulk_create(
+        _ClosingEntryTransactionModel = lazy_loader.get_closing_entry_transaction_model()
+        return closing_entry_model, _ClosingEntryTransactionModel.objects.bulk_create(
             objs=ce_txs_list,
             batch_size=100
         )
@@ -588,7 +590,7 @@ class EntityModelClosingEntryMixIn:
                                          cache_name: str = 'default',
                                          force_cache_update: bool = False,
                                          cache_timeout: Optional[int] = None,
-                                         **kwargs):
+                                         **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
 
         if not force_cache_update:
             cache_system = caches[cache_name]
@@ -599,8 +601,9 @@ class EntityModelClosingEntryMixIn:
             if ce_ser:
                 ce_qs_serde_gen = serializers.deserialize(format='json', stream_or_string=ce_ser)
                 return list(ce.object for ce in ce_qs_serde_gen)
-            return
-
+            else:
+                return None
+        # get here if we are forcing cache update
         return self.save_closing_entry_cache_for_date(
             closing_date=closing_date,
             cache_name=cache_name,
@@ -613,7 +616,7 @@ class EntityModelClosingEntryMixIn:
                                           cache_name: str = 'default',
                                           force_cache_update: bool = False,
                                           cache_timeout: Optional[int] = None,
-                                          **kwargs):
+                                          **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
 
         _, day = monthrange(year, month)
         closing_date = date(year, month, day)
@@ -630,7 +633,7 @@ class EntityModelClosingEntryMixIn:
                                                 cache_name: str = 'default',
                                                 force_cache_update: bool = False,
                                                 cache_timeout: Optional[int] = None,
-                                                **kwargs):
+                                                **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
         closing_date: date = getattr(self, 'get_fy_end')(year=fiscal_year)
         return self.get_closing_entry_cache_for_date(
             closing_date=closing_date,
@@ -858,6 +861,7 @@ class EntityModelAbstract(MP_Node,
             if isinstance(parent_entity, str):
                 # get by slug...
                 try:
+                    # noinspection PyUnusedLocal
                     parent_entity_model = EntityModel.objects.get(slug__exact=parent_entity, admin=admin)
                 except ObjectDoesNotExist:
                     raise EntityModelValidationError(
@@ -868,6 +872,7 @@ class EntityModelAbstract(MP_Node,
             elif isinstance(parent_entity, UUID):
                 # get by uuid...
                 try:
+                    # noinspection PyUnusedLocal
                     parent_entity_model = EntityModel.objects.get(uuid__exact=parent_entity, admin=admin)
                 except ObjectDoesNotExist:
                     raise EntityModelValidationError(
@@ -889,7 +894,7 @@ class EntityModelAbstract(MP_Node,
                     _('Only slug, UUID or EntityModel allowed.')
                 )
 
-            parent_entity.add_child(instance=entity_model)
+            parent_entity_model.add_child(instance=entity_model)
         return entity_model
 
     # ### ACCRUAL METHODS ######
@@ -1362,7 +1367,7 @@ class EntityModelAbstract(MP_Node,
         if not self.default_coa_id:
             if raise_exception:
                 raise EntityModelValidationError(message=_('No default_coa found.'))
-            return
+            return None
 
         return self.get_coa_accounts(active=active, order_by=order_by)
 
@@ -2803,11 +2808,11 @@ class EntityModelAbstract(MP_Node,
 
     def get_closing_entry_for_date(self, io_date: Union[date, datetime], inclusive: bool = True) -> Optional[date]:
         if io_date is None:
-            return
+            return None
         ce_date_list = self.fetch_closing_entry_dates_meta()
 
         if not ce_date_list:
-            return
+            return None
 
         if isinstance(io_date, datetime):
             io_date = io_date.date()
@@ -2815,14 +2820,15 @@ class EntityModelAbstract(MP_Node,
         ce_lookup = io_date - timedelta(days=1) if not inclusive else io_date
         if ce_lookup in ce_date_list:
             return ce_lookup
+        return None
 
     def get_nearest_next_closing_entry(self, io_date: Union[date, datetime]) -> Optional[date]:
         if io_date is None:
-            return
+            return None
 
         ce_date_list = self.fetch_closing_entry_dates_meta()
         if not len(ce_date_list):
-            return
+            return None
 
         if all([
             isinstance(io_date, date),
@@ -2836,6 +2842,7 @@ class EntityModelAbstract(MP_Node,
         for f, p in zip_longest(ce_date_list, ce_date_list[1:]):
             if p and p <= io_date < f:
                 return p
+        return None
 
     def close_entity_books(self,
                            closing_date: Optional[date] = None,
@@ -3195,6 +3202,8 @@ class EntityStateModelAbstract(Model):
     key = models.CharField(choices=KEY_CHOICES, max_length=10)
     sequence = models.BigIntegerField(default=0, validators=[MinValueValidator(limit_value=0)])
 
+    objects = models.Manager()  # explicitly point to the default manager
+
     class Meta:
         abstract = True
         indexes = [
@@ -3263,6 +3272,7 @@ class EntityManagementModel(EntityManagementModelAbstract):
     """
 
 
+# noinspection PyUnusedLocal
 def entitymodel_presave(instance: EntityModel, **kwargs):
     if not instance.slug:
         instance.generate_slug(commit=False)

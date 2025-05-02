@@ -30,7 +30,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io.io_core import get_localdate
 from django_ledger.models.bill import BillModel, BillModelQuerySet
-from django_ledger.models.entity import EntityModel
+from django_ledger.models.entity import EntityModel, EntityStateModel
 from django_ledger.models.items import ItemTransactionModel, ItemTransactionModelQuerySet, ItemModelQuerySet, ItemModel
 from django_ledger.models.mixins import CreateUpdateMixIn, MarkdownNotesMixIn, ItemizeMixIn
 from django_ledger.models.signals import (
@@ -1078,7 +1078,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
 
         if commit:
             self.save(update_fields=[
-                'void_date',
+                'date_void',
                 'po_status',
                 'updated'
             ])
@@ -1145,7 +1145,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         """
         return getattr(self, f'date_{self.po_status}')
 
-    def _get_next_state_model(self, raise_exception: bool = True):
+    def _get_next_state_model(self, raise_exception: bool = True) -> Optional[EntityStateModel]:
         """
         Fetches the next sequenced state model associated with the PurchaseOrderModel number.
 
@@ -1159,7 +1159,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         EntityStateModel
             An instance of EntityStateModel
         """
-        EntityStateModel = lazy_loader.get_entity_state_model()
+        _EntityStateModel = lazy_loader.get_entity_state_model()
         # noinspection PyShadowingNames
         EntityModel = lazy_loader.get_entity_model()
         entity_model = EntityModel.objects.get(uuid__exact=self.entity_id)
@@ -1169,10 +1169,10 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 'entity_model_id__exact': self.entity_id,
                 'entity_unit_id': None,
                 'fiscal_year': fy_key,
-                'key__exact': EntityStateModel.KEY_PURCHASE_ORDER
+                'key__exact': _EntityStateModel.KEY_PURCHASE_ORDER
             }
 
-            state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
+            state_model_qs = _EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
             state_model = state_model_qs.get()
             state_model.sequence = F('sequence') + 1
@@ -1189,14 +1189,15 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 'entity_model_id': entity_model.uuid,
                 'entity_unit_id': None,
                 'fiscal_year': fy_key,
-                'key': EntityStateModel.KEY_PURCHASE_ORDER,
+                'key': _EntityStateModel.KEY_PURCHASE_ORDER,
                 'sequence': 1
             }
-            state_model = EntityStateModel.objects.create(**LOOKUP)
+            state_model = _EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_po_number(self, commit: bool = False) -> str:
         """
@@ -1241,6 +1242,7 @@ class PurchaseOrderModel(PurchaseOrderModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def purchaseordermodel_presave(instance: PurchaseOrderModel, **kwargs):
     if instance.can_generate_po_number():
         instance.generate_po_number(commit=False)

@@ -9,12 +9,12 @@ goods or services. The model manages all the Sales Invoices which are issued by 
 due amount.
 
 Examples
-________
->>> user_model = request.user  # django UserModel
->>> entity_slug = kwargs['entity_slug'] # may come from view kwargs
->>> invoice_model = InvoiceModel()
->>> ledger_model, invoice_model = invoice_model.configure(entity_slug=entity_slug, user_model=user_model)
->>> invoice_model.save()
+--------
+    user_model = request.user  # django UserModel
+    entity_slug = kwargs['entity_slug'] # may come from view kwargs
+    invoice_model = InvoiceModel()
+    ledger_model, invoice_model = invoice_model.configure(entity_slug=entity_slug, user_model=user_model)
+    invoice_model.save()
 """
 
 from datetime import date, datetime
@@ -199,7 +199,7 @@ class InvoiceModelManager(Manager):
             Q(ledger__entity__managers__in=[user_model])
         )
 
-    def for_entity(self, entity_slug, user_model) -> InvoiceModelQuerySet:
+    def for_entity(self, entity_slug, user_model) -> Union[InvoiceModelQuerySet, None]:
         """
         Returns a QuerySet of InvoiceModels associated with a specific EntityModel & UserModel.
         May pass an instance of EntityModel or a String representing the EntityModel slug.
@@ -221,6 +221,8 @@ class InvoiceModelManager(Manager):
             return qs.filter(ledger__entity=entity_slug)
         elif isinstance(entity_slug, str):
             return qs.filter(ledger__entity__slug__exact=entity_slug)
+        else:
+            return None
 
     def for_entity_unpaid(self, entity_slug, user_model):
         qs = self.for_entity(entity_slug=entity_slug, user_model=user_model)
@@ -1428,7 +1430,6 @@ class InvoiceModelAbstract(
                 user_model=user_model,
                 entity_slug=entity_slug,
                 void=True,
-                void_date=self.date_void,
                 force_migrate=True,
                 raise_exception=False
             )
@@ -1560,7 +1561,7 @@ class InvoiceModelAbstract(
     def delete(self, force_db_delete: bool = False, using=None, keep_parents=False):
         if not force_db_delete:
             self.mark_as_canceled(commit=True)
-            return
+            return None
         if not self.can_delete():
             raise InvoiceModelValidationError(
                 message=_(f'Invoice {self.invoice_number} cannot be deleted...')
@@ -1753,6 +1754,7 @@ class InvoiceModelAbstract(
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_invoice_number(self, commit: bool = False) -> str:
         """
@@ -1833,6 +1835,7 @@ class InvoiceModel(InvoiceModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def invoicemodel_presave(instance: InvoiceModel, **kwargs):
     if instance.can_generate_invoice_number():
         instance.generate_invoice_number(commit=False)

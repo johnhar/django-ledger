@@ -3,7 +3,7 @@ from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 
-from django_ledger.models import CustomerModel, EntityModel
+from django_ledger.models import CustomerModel, EntityModel, CustomerModelQueryset
 
 
 class CustomerNode(DjangoObjectType):
@@ -29,10 +29,11 @@ class EntityList(DjangoObjectType):
 class CustomerQuery(graphene.ObjectType):
     all_customers = DjangoFilterConnectionField(CustomerNode, slug_name=graphene.String(required=True))
 
+    # noinspection PyUnusedLocal
     @staticmethod
-    def resolve_all_customers(info, slug_name, **kwargs):
+    def resolve_all_customers(info, slug_name, **kwargs) -> CustomerModelQueryset:
         if info.context.user.is_authenticated:
-            CustomerModel.objects.for_entity(
+            return CustomerModel.objects.for_entity(
                 entity_slug=slug_name,
                 user_model=info.context.user
             ).order_by('-updated')

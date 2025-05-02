@@ -8,11 +8,11 @@ In addition to tracking the bill amount, it tracks the paid and due amount.
 
 Examples
 ________
->>> user_model = request.user  # django UserModel
->>> entity_slug = kwargs['entity_slug'] # may come from view kwargs
->>> bill_model = BillModel()
->>> ledger_model, bill_model = bill_model.configure(entity_slug=entity_slug, user_model=user_model)
->>> bill_model.save()
+    user_model = request.user  # django UserModel
+    entity_slug = kwargs['entity_slug'] # may come from view kwargs
+    bill_model = BillModel()
+    ledger_model, bill_model = bill_model.configure(entity_slug=entity_slug, user_model=user_model)
+    bill_model.save()
 """
 
 from datetime import date, datetime
@@ -31,7 +31,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_ACC_PAYABLE
 from django_ledger.io.io_core import get_localtime, get_localdate
-from django_ledger.models.entity import EntityModel
+from django_ledger.models.entity import EntityModel, EntityStateModel
 from django_ledger.models.items import ItemTransactionModelQuerySet, ItemTransactionModel, ItemModel, ItemModelQuerySet
 from django_ledger.models.mixins import (
     CreateUpdateMixIn,
@@ -205,8 +205,8 @@ class BillModelManager(Manager):
 
         Examples
         ________
-            >>> request_user = request.user
-            >>> bill_model_qs = BillModel.objects.for_user(user_model=request_user)
+                request_user = request.user
+                bill_model_qs = BillModel.objects.for_user(user_model=request_user)
 
         Returns
         _______
@@ -246,13 +246,13 @@ class BillModelManager(Manager):
         """
         qs = self.for_user(user_model)
         if isinstance(entity_slug, EntityModel):
-            return qs.filter(
-                Q(ledger__entity=entity_slug)
-            )
+            qs = qs.filter(Q(ledger__entity=entity_slug))
         elif isinstance(entity_slug, str):
-            return qs.filter(
-                Q(ledger__entity__slug__exact=entity_slug)
-            )
+            qs = qs.filter(Q(ledger__entity__slug=entity_slug))
+        else:
+            raise TypeError('entity_slug must be a string or EntityModel')
+        # noinspection PyTypeChecker
+        return qs
 
 
 class BillModelAbstract(
@@ -527,6 +527,7 @@ class BillModelAbstract(
             entity_id__exact=self.ledger.entity_id
         ).bills()
 
+    # noinspection PyMethodOverriding
     def validate_itemtxs_qs(self, queryset: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the BillModel.
@@ -1536,7 +1537,6 @@ class BillModelAbstract(
                 entity_slug=entity_slug,
                 user_model=user_model,
                 void=True,
-                void_date=self.date_void,
                 raise_exception=False,
                 force_migrate=True)
             self.save()
@@ -1666,7 +1666,7 @@ class BillModelAbstract(
     def delete(self, force_db_delete: bool = False, using=None, keep_parents=False):
         if not force_db_delete:
             self.mark_as_canceled(commit=True)
-            return
+            return None
         if not self.can_delete():
             raise BillModelValidationError(
                 message=_(f'Bill {self.bill_number} cannot be deleted...')
@@ -1803,7 +1803,7 @@ class BillModelAbstract(
         """
         return self.date_approved
 
-    def _get_next_state_model(self, raise_exception: bool = True):
+    def _get_next_state_model(self, raise_exception: bool = True) -> Union[EntityStateModel | None]:
         """
         Fetches the next sequenced state model associated with the BillModel number.
 
@@ -1815,12 +1815,11 @@ class BillModelAbstract(
         Returns
         -------
         EntityStateModel
-            An instance of EntityStateModel
+            An instance of EntityStateModel, if no exception is raised.
         """
-        EntityStateModel = lazy_loader.get_entity_state_model()
-        # noinspection PyShadowingNames
-        EntityModel = lazy_loader.get_entity_model()
-        entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
+        _EntityStateModel: EntityStateModel = lazy_loader.get_entity_state_model()
+        _EntityModel: EntityModel = lazy_loader.get_entity_model()
+        entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
         fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
 
         try:
@@ -1828,10 +1827,10 @@ class BillModelAbstract(
                 'entity_model_id__exact': self.ledger.entity_id,
                 'entity_unit_id__exact': None,
                 'fiscal_year': fy_key,
-                'key__exact': EntityStateModel.KEY_BILL
+                'key__exact': _EntityStateModel.KEY_BILL
             }
 
-            state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
+            state_model_qs = _EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
             state_model = state_model_qs.get()
             state_model.sequence = F('sequence') + 1
@@ -1839,23 +1838,23 @@ class BillModelAbstract(
             state_model.refresh_from_db()
             return state_model
         except ObjectDoesNotExist:
-            # noinspection PyShadowingNames
-            EntityModel = lazy_loader.get_entity_model()
-            entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
+            _EntityModel: EntityModel = lazy_loader.get_entity_model()
+            entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
             fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
 
             LOOKUP = {
                 'entity_model_id': entity_model.uuid,
                 'entity_unit_id': None,
                 'fiscal_year': fy_key,
-                'key': EntityStateModel.KEY_BILL,
+                'key': _EntityStateModel.KEY_BILL,
                 'sequence': 1
             }
-            state_model = EntityStateModel.objects.create(**LOOKUP)
+            state_model = _EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_bill_number(self, commit: bool = False) -> str:
         """
@@ -1929,6 +1928,7 @@ class BillModel(BillModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def billmodel_presave(instance: BillModel, **kwargs):
     if instance.can_generate_bill_number():
         instance.generate_bill_number(commit=False)

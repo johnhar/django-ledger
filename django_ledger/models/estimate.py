@@ -13,7 +13,7 @@ to produce more specific financial reports associated with a specific scope of w
 from datetime import date
 from decimal import Decimal
 from string import ascii_uppercase, digits
-from typing import Union, Optional, List, Dict, Tuple
+from typing import Union, Optional, List, Dict, Self, Any
 from uuid import uuid4, UUID
 
 from django.contrib.auth import get_user_model
@@ -342,7 +342,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
                   date_draft: Optional[date] = None,
                   estimate_title: Optional[str] = None,
                   commit: bool = False,
-                  raise_exception: bool = True):
+                  raise_exception: bool = True) -> Union[Self, None]:
         """
         A configuration hook which executes all initial EstimateModel setup.
         Can only call this method once in the lifetime of a EstimateModel.
@@ -367,25 +367,30 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         Returns
         -------
         EstimateModel
-            The configured EstimateModel instance.
+            The configured EstimateModel instance.  If there is an error, we will either raise an exception
+            or return None.
         """
         if not self.is_configured():
             if isinstance(entity_slug, (str, UUID)):
                 if not user_model:
                     if raise_exception:
                         raise EstimateModelValidationError(_('Must pass user_model when using entity_slug.'))
-                    return
+                    return None
                 entity_qs = EntityModel.objects.for_user(user_model=user_model)
                 if isinstance(entity_slug, str):
                     entity_model: EntityModel = get_object_or_404(entity_qs, slug__exact=entity_slug)
                 elif isinstance(entity_slug, UUID):
                     entity_model: EntityModel = get_object_or_404(entity_qs, uuid__exact=entity_slug)
+                else:
+                    if raise_exception:
+                        raise TypeError(_(f'Invalid entity_slug "{entity_slug}"'))
+                    return None
             elif isinstance(entity_slug, EntityModel):
                 entity_model = entity_slug
             else:
                 if raise_exception:
                     raise EstimateModelValidationError('entity_slug must be an instance of str or EntityModel')
-                return
+                return None
 
             if estimate_title:
                 self.title = estimate_title
@@ -1134,7 +1139,8 @@ class EstimateModelAbstract(CreateUpdateMixIn,
     def get_itemtxs_data(self,
                          queryset: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
                          aggregate_on_db: bool = False,
-                         lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, dict]:
+                         lazy_agg: bool = False) -> tuple[
+        ItemTransactionModelQuerySet | list[ItemTransactionModel] | Any, None]:
 
         """
         Returns all ItemTransactionModels associated with the EstimateModel and a total aggregate.
@@ -1151,7 +1157,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
 
         Returns
         -------
-        A tuple: ItemTransactionModelQuerySet, aggregation metrics dict (None)
+        A tuple: ItemTransactionModelQuerySet or list of ItemTransactionModels, then aggregation metrics dict (None)
         """
         if not queryset:
             queryset = self.itemtransactionmodel_set.select_related('item_model').all()
@@ -1341,7 +1347,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             if as_percent:
                 return gm * 100
             return gm
-        except ZeroDivisionError as e:
+        except ZeroDivisionError:
             if raise_exception:
                 raise EstimateModelValidationError(message=_('Cannot compute gross margin, total cost is zero.'))
             return 0.00
@@ -1525,7 +1531,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         invoice_status = self.get_invoiced_amount(invoice_qs)
         return stats | po_status | billing_status | invoice_status
 
-    def _get_next_state_model(self, raise_exception: bool = True):
+    def _get_next_state_model(self, raise_exception: bool = True) -> Union['EntityStateModel', None]:
         """
         Fetches the next sequenced state model associated with the EstimateModel number.
 
@@ -1574,6 +1580,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_estimate_number(self, commit: bool = False) -> str:
         """

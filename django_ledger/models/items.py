@@ -20,6 +20,7 @@ Totals will be calculated and associated with the containing model at the time o
 """
 from decimal import Decimal
 from string import ascii_lowercase, digits
+from typing import Optional
 from uuid import uuid4, UUID
 
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -641,7 +642,7 @@ class ItemModelAbstract(CreateUpdateMixIn):
             return f'Product: {self.name}'
         return f'Item Model: {self.name} - {self.sku} | {self.get_item_type_display()}'
 
-    def is_expense(self):
+    def is_expense(self) -> bool:
         if self.item_role:
             return self.item_role == self.ITEM_ROLE_EXPENSE
         if all([
@@ -652,7 +653,7 @@ class ItemModelAbstract(CreateUpdateMixIn):
             return True
         return False
 
-    def is_inventory(self):
+    def is_inventory(self) -> bool:
         if self.item_role:
             return self.item_role == self.ITEM_ROLE_INVENTORY
 
@@ -664,7 +665,7 @@ class ItemModelAbstract(CreateUpdateMixIn):
             return True
         return False
 
-    def is_product(self):
+    def is_product(self) -> bool:
         if self.item_role:
             return self.item_role == self.ITEM_ROLE_PRODUCT
 
@@ -677,7 +678,7 @@ class ItemModelAbstract(CreateUpdateMixIn):
             return True
         return False
 
-    def is_service(self):
+    def is_service(self) -> bool:
         if self.item_role:
             return self.item_role == self.ITEM_ROLE_SERVICE
         if all([
@@ -689,25 +690,28 @@ class ItemModelAbstract(CreateUpdateMixIn):
             return True
         return False
 
-    def product_or_service_display(self):
+    def product_or_service_display(self) -> str:
         if self.is_product():
             return 'product'
         elif self.is_service():
             return 'service'
+        else:
+            # the safest option is to return None, but let's catch this unhandled condition
+            raise RuntimeError(f'Unsupported product or service: {self}. If new item role was defined, add support here.')
 
-    def is_labor(self):
+    def is_labor(self) -> bool:
         return self.item_type == self.ITEM_TYPE_LABOR
 
-    def is_material(self):
+    def is_material(self) -> bool:
         return self.item_type == self.ITEM_TYPE_MATERIAL
 
-    def is_equipment(self):
+    def is_equipment(self) -> bool:
         return self.item_type == self.ITEM_TYPE_EQUIPMENT
 
-    def is_lump_sum(self):
+    def is_lump_sum(self) -> bool:
         return self.item_type == self.ITEM_TYPE_LUMP_SUM
 
-    def is_other(self):
+    def is_other(self) -> bool:
         return self.item_type == self.ITEM_TYPE_OTHER
 
     def get_average_cost(self) -> Decimal:
@@ -737,16 +741,17 @@ class ItemModelAbstract(CreateUpdateMixIn):
             not self.item_number
         ])
 
-    def _get_next_state_model(self, raise_exception: bool = True):
-        EntityStateModel = lazy_loader.get_entity_state_model()
+    # noinspection PyUnresolvedReferences
+    def _get_next_state_model(self, raise_exception: bool = True) -> Optional['EntityStateModel']:
+        _EntityStateModel = lazy_loader.get_entity_state_model()
 
         try:
             LOOKUP = {
                 'entity_model_id__exact': self.entity_id,
-                'key__exact': EntityStateModel.KEY_ITEM
+                'key__exact': _EntityStateModel.KEY_ITEM
             }
 
-            state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_for_update()
+            state_model_qs = _EntityStateModel.objects.filter(**LOOKUP).select_for_update()
             state_model = state_model_qs.get()
             state_model.sequence = F('sequence') + 1
             state_model.save()
@@ -759,14 +764,15 @@ class ItemModelAbstract(CreateUpdateMixIn):
                 'entity_model_id': self.entity_id,
                 'entity_unit_id': None,
                 'fiscal_year': None,
-                'key': EntityStateModel.KEY_ITEM,
+                'key': _EntityStateModel.KEY_ITEM,
                 'sequence': 1
             }
-            state_model = EntityStateModel.objects.create(**LOOKUP)
+            state_model = _EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_item_number(self, commit: bool = False) -> str:
         """
@@ -908,7 +914,7 @@ class ItemTransactionModelManager(Manager):
 
     def for_estimate(self, user_model, entity_slug, cj_pk):
         qs = self.for_entity(entity_slug=entity_slug, user_model=user_model)
-        return self.filter(ce_model_id__exact=cj_pk)
+        return qs.filter(ce_model_id__exact=cj_pk)
 
     def for_contract(self, user_model, entity_slug, ce_pk):
         """

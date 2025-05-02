@@ -12,7 +12,7 @@ or further processing.
 """
 
 from decimal import Decimal
-from typing import Optional, Set, Dict, List
+from typing import Optional, Set, Dict, List, Union
 from uuid import uuid4, UUID
 
 from django.core.exceptions import ValidationError
@@ -28,248 +28,6 @@ from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.utils import lazy_loader
 
 
-class ImportJobModelValidationError(ValidationError):
-    pass
-
-
-class ImportJobModelQuerySet(QuerySet):
-    pass
-
-
-class ImportJobModelManager(Manager):
-    """
-    Manages queryset operations related to import jobs.
-
-    This manager provides custom queryset handling for import job models, including
-    annotations for custom fields like transaction counts, user-specific filters,
-    and entity-specific filters. It is integrated with the ImportJobModel, designed
-    to support complex query requirements with field annotations and related object
-    optimizations for performance efficiency.
-
-    """
-
-    def get_queryset(self):
-        """
-        Generates a QuerySet with annotated data for ImportJobModel.
-
-        This method constructs a custom QuerySet for ImportJobModel with multiple
-        annotations and related fields. It includes counts for specific transaction
-        states, calculates pending transactions, and checks for completion status
-        of the import job. The QuerySet uses annotations and filters to derive
-        various properties required for processing.
-
-        Returns
-        -------
-        QuerySet
-            A QuerySet with additional annotations:
-            - _entity_uuid : UUID of the entity associated with the ledger model.
-            - _entity_slug : Slug of the entity associated with the ledger model.
-            - txs_count : Integer count of non-root transactions.
-            - txs_mapped_count : Integer count of mapped transactions based on specific
-              conditions.
-            - txs_pending : Integer count of pending transactions, calculated as
-              txs_count - txs_mapped_count.
-            - is_complete : Boolean value indicating if the import job is complete
-              (no pending transactions or total count is zero).
-        """
-        qs = ImportJobModelQuerySet(self.model, using=self._db)
-        return qs.annotate(
-            _entity_uuid=F('ledger_model__entity__uuid'),
-            _entity_slug=F('ledger_model__entity__slug'),
-            txs_count=Count('stagedtransactionmodel',
-                            filter=Q(stagedtransactionmodel__parent__isnull=False)),
-            txs_mapped_count=Count(
-                'stagedtransactionmodel__account_model_id',
-                filter=Q(stagedtransactionmodel__parent__isnull=False) |
-                       Q(stagedtransactionmodel__parent__parent__isnull=False)
-
-            ),
-        ).annotate(
-            txs_pending=F('txs_count') - F('txs_mapped_count')
-        ).annotate(
-            is_complete=Case(
-                When(txs_count__exact=0, then=False),
-                When(txs_pending__exact=0, then=True),
-                default=False,
-                output_field=BooleanField()
-            ),
-        ).select_related(
-            'bank_account_model',
-            'bank_account_model__account_model',
-            'ledger_model'
-        )
-
-    def for_user(self, user_model):
-        """
-        Filters the queryset based on the user's permissions for accessing the data
-        related to bank accounts and entities they manage or administer.
-
-        This method first retrieves the default queryset. If the user is a superuser,
-        the query will return the full queryset without any filters. Otherwise, the
-        query will be limited to the entities that the user either administers or is
-        listed as a manager for.
-
-        Parameters
-        ----------
-        user_model : User
-            The user model instance whose permissions determine the filtering of the queryset.
-
-        Returns
-        -------
-        QuerySet
-            A filtered queryset based on the user's role and associated permissions.
-        """
-        qs = self.get_queryset()
-        if user_model.is_superuser:
-            return qs
-        return qs.filter(
-            Q(bank_account_model__entity_model__admin=user_model) |
-            Q(bank_account_model__entity_model__managers__in=[user_model])
-
-        )
-
-    def for_entity(self, entity_slug: str, user_model):
-        qs = self.for_user(user_model)
-        return qs.filter(
-            Q(bank_account_model__entity_model__slug__exact=entity_slug)
-        )
-
-
-class ImportJobModelAbstract(CreateUpdateMixIn):
-    """
-    Abstract model for managing import jobs within a financial system.
-
-    This abstract model serves as a foundational base for managing import jobs involving
-    bank accounts and ledger models. It provides functionalities such as linking to an
-    associated bank account and ledger model, determining completion status of the
-    import job, and properties for UUID and slug identifiers. Additionally, helper
-    methods are provided for configuration and deletion confirmation.
-
-    Attributes
-    ----------
-    uuid : UUID
-        Unique identifier for the import job instance.
-    description : str
-        Descriptive label or description for the import job.
-    bank_account_model : BankAccountModel
-        Foreign key linking the import job to a bank account model.
-    ledger_model : LedgerModel or None
-        One-to-one field linking the import job to a ledger model. Can be null or blank.
-    completed : bool
-        Indicates whether the import job has been completed.
-    objects : ImportJobModelManager
-        Manager for handling query operations and model lifecycle.
-    """
-    uuid = models.UUIDField(default=uuid4, editable=False, primary_key=True)
-    description = models.CharField(max_length=200, verbose_name=_('Description'))
-    bank_account_model = models.ForeignKey('django_ledger.BankAccountModel',
-                                           on_delete=models.CASCADE,
-                                           verbose_name=_('Associated Bank Account Model'))
-    ledger_model = models.OneToOneField('django_ledger.LedgerModel',
-                                        editable=False,
-                                        on_delete=models.CASCADE,
-                                        verbose_name=_('Ledger Model'),
-                                        null=True,
-                                        blank=True)
-    completed = models.BooleanField(default=False, verbose_name=_('Import Job Completed'))
-    objects = ImportJobModelManager()
-
-    class Meta:
-        abstract = True
-        verbose_name = _('Import Job Model')
-        indexes = [
-            models.Index(fields=['bank_account_model']),
-            models.Index(fields=['ledger_model']),
-            models.Index(fields=['completed']),
-        ]
-
-    @property
-    def entity_uuid(self) -> UUID:
-        """
-        Get the UUID of the entity associated with the ledger model.
-
-        This property retrieves the UUID of the entity. If the `_entity_uuid`
-        attribute exists, it is returned. Otherwise, the UUID is fetched
-        from the `entity_model_id` attribute of the `ledger_model` instance.
-
-        Returns
-        -------
-        str
-            The UUID of the entity as a string.
-        """
-        try:
-            return getattr(self, '_entity_uuid')
-        except AttributeError:
-            pass
-        return self.ledger_model.entity_model_id
-
-    @property
-    def entity_slug(self) -> str:
-        """
-        Returns the slug identifier for the entity associated with the current instance.
-
-        The entity slug is a unique string that represents the associated entity in a
-        human-readable format. If the `_entity_slug` property is explicitly set, it is
-        returned. Otherwise, the slug associated with the `entity_model` within the
-        `ledger_model` is used as the default value.
-
-
-        Returns
-        -------
-        str
-            The slug identifier related to the entity.
-        """
-        try:
-            return getattr(self, '_entity_slug')
-        except AttributeError:
-            pass
-        return self.ledger_model.entity_model.slug
-
-    def is_configured(self):
-        """
-        Checks if the configuration for the instance is complete.
-
-        This method verifies whether the necessary attributes for ledger model ID
-        and bank account model ID are set. Only when both attributes are
-        non-None, the configuration is considered complete.
-
-        Returns
-        -------
-        bool
-            True if both `ledger_model_id` and `bank_account_model_id` attributes
-            are set (not None), otherwise False.
-        """
-        return all([
-            self.ledger_model_id is not None,
-            self.bank_account_model_id is not None
-        ])
-
-    def configure(self, commit: bool = True):
-        """
-        Configures the ledger model if not already configured and optionally commits the changes.
-
-        This method checks if the ledger model is configured, and if not, it creates a new ledger
-        based on the associated bank account model's entity model. Additionally, it can commit
-        the changes to update the database based on the given parameter.
-
-        Parameters
-        ----------
-        commit : bool, optional
-            Determines whether to persist the changes to the database. Defaults to `True`.
-        """
-        if not self.is_configured():
-            if self.ledger_model_id is None:
-                self.ledger_model = self.bank_account_model.entity_model.create_ledger(
-                    name=self.description
-                )
-            if commit:
-                self.save(
-                    update_fields=[
-                        'ledger_model'
-                    ])
-
-    def get_delete_message(self) -> str:
-        return _(f'Are you sure you want to delete Import Job {self.description}?')
 
 
 class StagedTransactionModelQuerySet(QuerySet):
@@ -894,7 +652,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             self.is_role_mapping_valid(raise_exception=False)
         ])
 
-    def add_split(self, raise_exception: bool = True, commit: bool = True, n: int = 1):
+    def add_split(self, raise_exception: bool = True, commit: bool = True, n: int = 1) -> List['StagedTransactionModel']:
         """
         Adds a specified number of split transactions to the staged transaction.
 
@@ -922,10 +680,11 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         """
         if not self.can_split():
             if raise_exception:
+                # noinspection PyUnboundLocalVariable
                 raise ImportJobModelValidationError(
                     message=_(f'Staged Transaction {self.uuid} already split.')
                 )
-            return
+            return []
 
         if not self.has_children():
             n += 1
@@ -1059,7 +818,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
         """
         return self.get_prospect_je_activity_try(raise_exception=False)
 
-    def get_prospect_je_activity_display(self) -> Optional[str]:
+    def get_prospect_je_activity_display(self) -> Union[str, None]:
         """
         Provides functionality to retrieve and display the prospect journal entry activity
         based on the mapped activity associated with a prospect. The method attempts to
@@ -1076,6 +835,8 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             # noinspection PyShadowingNames
             JournalEntryModel = lazy_loader.get_journal_entry_model()
             return JournalEntryModel.MAP_ACTIVITIES[activity]
+        else:
+            return None
 
     def is_role_mapping_valid(self, raise_exception: bool = False) -> bool:
         """
@@ -1172,6 +933,250 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
             self.is_role_mapping_valid(raise_exception=True)
 
 
+class ImportJobModelValidationError(ValidationError):
+    pass
+
+
+class ImportJobModelQuerySet(QuerySet):
+    pass
+
+
+class ImportJobModelManager(Manager):
+    """
+    Manages queryset operations related to import jobs.
+
+    This manager provides custom queryset handling for import job models, including
+    annotations for custom fields like transaction counts, user-specific filters,
+    and entity-specific filters. It is integrated with the ImportJobModel, designed
+    to support complex query requirements with field annotations and related object
+    optimizations for performance efficiency.
+
+    """
+
+    def get_queryset(self):
+        """
+        Generates a QuerySet with annotated data for ImportJobModel.
+
+        This method constructs a custom QuerySet for ImportJobModel with multiple
+        annotations and related fields. It includes counts for specific transaction
+        states, calculates pending transactions, and checks for completion status
+        of the import job. The QuerySet uses annotations and filters to derive
+        various properties required for processing.
+
+        Returns
+        -------
+        QuerySet
+            A QuerySet with additional annotations:
+            - _entity_uuid : UUID of the entity associated with the ledger model.
+            - _entity_slug : Slug of the entity associated with the ledger model.
+            - txs_count : Integer count of non-root transactions.
+            - txs_mapped_count : Integer count of mapped transactions based on specific
+              conditions.
+            - txs_pending : Integer count of pending transactions, calculated as
+              txs_count - txs_mapped_count.
+            - is_complete : Boolean value indicating if the import job is complete
+              (no pending transactions or total count is zero).
+        """
+        qs = ImportJobModelQuerySet(self.model, using=self._db)
+        return qs.annotate(
+            _entity_uuid=F('ledger_model__entity__uuid'),
+            _entity_slug=F('ledger_model__entity__slug'),
+            txs_count=Count('stagedtransactionmodel',
+                            filter=Q(stagedtransactionmodel__parent__isnull=False)),
+            txs_mapped_count=Count(
+                'stagedtransactionmodel__account_model_id',
+                filter=Q(stagedtransactionmodel__parent__isnull=False) |
+                       Q(stagedtransactionmodel__parent__parent__isnull=False)
+
+            ),
+        ).annotate(
+            txs_pending=F('txs_count') - F('txs_mapped_count')
+        ).annotate(
+            is_complete=Case(
+                When(txs_count__exact=0, then=False),
+                When(txs_pending__exact=0, then=True),
+                default=False,
+                output_field=BooleanField()
+            ),
+        ).select_related(
+            'bank_account_model',
+            'bank_account_model__account_model',
+            'ledger_model'
+        )
+
+    def for_user(self, user_model):
+        """
+        Filters the queryset based on the user's permissions for accessing the data
+        related to bank accounts and entities they manage or administer.
+
+        This method first retrieves the default queryset. If the user is a superuser,
+        the query will return the full queryset without any filters. Otherwise, the
+        query will be limited to the entities that the user either administers or is
+        listed as a manager for.
+
+        Parameters
+        ----------
+        user_model : User
+            The user model instance whose permissions determine the filtering of the queryset.
+
+        Returns
+        -------
+        QuerySet
+            A filtered queryset based on the user's role and associated permissions.
+        """
+        qs = self.get_queryset()
+        if user_model.is_superuser:
+            return qs
+        return qs.filter(
+            Q(bank_account_model__entity_model__admin=user_model) |
+            Q(bank_account_model__entity_model__managers__in=[user_model])
+
+        )
+
+    def for_entity(self, entity_slug: str, user_model):
+        qs = self.for_user(user_model)
+        return qs.filter(
+            Q(bank_account_model__entity_model__slug__exact=entity_slug)
+        )
+
+
+class ImportJobModelAbstract(CreateUpdateMixIn):
+    """
+    Abstract model for managing import jobs within a financial system.
+
+    This abstract model serves as a foundational base for managing import jobs involving
+    bank accounts and ledger models. It provides functionalities such as linking to an
+    associated bank account and ledger model, determining completion status of the
+    import job, and properties for UUID and slug identifiers. Additionally, helper
+    methods are provided for configuration and deletion confirmation.
+
+    Attributes
+    ----------
+    uuid : UUID
+        Unique identifier for the import job instance.
+    description : str
+        Descriptive label or description for the import job.
+    bank_account_model : BankAccountModel
+        Foreign key linking the import job to a bank account model.
+    ledger_model : LedgerModel or None
+        One-to-one field linking the import job to a ledger model. Can be null or blank.
+    completed : bool
+        Indicates whether the import job has been completed.
+    objects : ImportJobModelManager
+        Manager for handling query operations and model lifecycle.
+    """
+    uuid = models.UUIDField(default=uuid4, editable=False, primary_key=True)
+    description = models.CharField(max_length=200, verbose_name=_('Description'))
+    bank_account_model = models.ForeignKey('django_ledger.BankAccountModel',
+                                           on_delete=models.CASCADE,
+                                           verbose_name=_('Associated Bank Account Model'))
+    ledger_model = models.OneToOneField('django_ledger.LedgerModel',
+                                        editable=False,
+                                        on_delete=models.CASCADE,
+                                        verbose_name=_('Ledger Model'),
+                                        null=True,
+                                        blank=True)
+    completed = models.BooleanField(default=False, verbose_name=_('Import Job Completed'))
+    objects = ImportJobModelManager()
+
+    class Meta:
+        abstract = True
+        verbose_name = _('Import Job Model')
+        indexes = [
+            models.Index(fields=['bank_account_model']),
+            models.Index(fields=['ledger_model']),
+            models.Index(fields=['completed']),
+        ]
+
+    @property
+    def entity_uuid(self) -> UUID:
+        """
+        Get the UUID of the entity associated with the ledger model.
+
+        This property retrieves the UUID of the entity. If the `_entity_uuid`
+        attribute exists, it is returned. Otherwise, the UUID is fetched
+        from the `entity_model_id` attribute of the `ledger_model` instance.
+
+        Returns
+        -------
+        str
+            The UUID of the entity as a string.
+        """
+        try:
+            return getattr(self, '_entity_uuid')
+        except AttributeError:
+            pass
+        return self.ledger_model.entity_model_id
+
+    @property
+    def entity_slug(self) -> str:
+        """
+        Returns the slug identifier for the entity associated with the current instance.
+
+        The entity slug is a unique string that represents the associated entity in a
+        human-readable format. If the `_entity_slug` property is explicitly set, it is
+        returned. Otherwise, the slug associated with the `entity_model` within the
+        `ledger_model` is used as the default value.
+
+
+        Returns
+        -------
+        str
+            The slug identifier related to the entity.
+        """
+        try:
+            return getattr(self, '_entity_slug')
+        except AttributeError:
+            pass
+        return self.ledger_model.entity_model.slug
+
+    def is_configured(self):
+        """
+        Checks if the configuration for the instance is complete.
+
+        This method verifies whether the necessary attributes for ledger model ID
+        and bank account model ID are set. Only when both attributes are
+        non-None, the configuration is considered complete.
+
+        Returns
+        -------
+        bool
+            True if both `ledger_model_id` and `bank_account_model_id` attributes
+            are set (not None), otherwise False.
+        """
+        return all([
+            self.ledger_model_id is not None,
+            self.bank_account_model_id is not None
+        ])
+
+    def configure(self, commit: bool = True):
+        """
+        Configures the ledger model if not already configured and optionally commits the changes.
+
+        This method checks if the ledger model is configured, and if not, it creates a new ledger
+        based on the associated bank account model's entity model. Additionally, it can commit
+        the changes to update the database based on the given parameter.
+
+        Parameters
+        ----------
+        commit : bool, optional
+            Determines whether to persist the changes to the database. Defaults to `True`.
+        """
+        if not self.is_configured():
+            if self.ledger_model_id is None:
+                self.ledger_model = self.bank_account_model.entity_model.create_ledger(
+                    name=self.description
+                )
+            if commit:
+                self.save(
+                    update_fields=[
+                        'ledger_model'
+                    ])
+
+    def get_delete_message(self) -> str:
+        return _(f'Are you sure you want to delete Import Job {self.description}?')
+
+
 class ImportJobModel(ImportJobModelAbstract):
     """
     Transaction Import Job Model Base Class.
@@ -1181,6 +1186,7 @@ class ImportJobModel(ImportJobModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def importjobmodel_presave(instance: ImportJobModel, **kwargs):
     if instance.is_configured():
         if instance.bank_account_model.entity_model_id != instance.ledger_model.entity_id:

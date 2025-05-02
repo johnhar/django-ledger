@@ -7,6 +7,7 @@ Miguel Sanda <msanda@arrobalytics.com>
 """
 
 from calendar import month_abbr
+from decimal import Decimal
 from random import randint
 from typing import Union
 
@@ -36,43 +37,49 @@ def current_version():
 
 
 @register.simple_tag(name='currency_symbol')
-def currency_symbol(spaced: bool = False):
+def currency_symbol(spaced: bool = False) -> str:
     if spaced or DJANGO_LEDGER_SPACED_CURRENCY_SYMBOL:
         return f'{DJANGO_LEDGER_CURRENCY_SYMBOL} '
     return DJANGO_LEDGER_CURRENCY_SYMBOL
 
 
 @register.filter(name='absolute')
-def absolute(value):
-    if value:
-        if isinstance(value, str):
-            value = float(value)
-        return abs(value)
+def absolute(value: Union[Decimal, float, int, str]) -> float:
+    if isinstance(value, (Decimal, int, str)):
+        value = float(value)
+    elif not isinstance(value, float):
+        raise ValueError(f"Received unexpected value {value} of type {type(value)}")
+    return abs(value)
 
 
 @register.filter(name='reverse_sign')
-def reverse_sign(value):
-    if value:
-        if isinstance(value, str):
-            value = float(value)
-        return -value
+def reverse_sign(value: Union[Decimal, float, int, str]) -> float:
+    if isinstance(value, (Decimal, int, str)):
+        value = float(value)
+    elif not isinstance(value, float):
+        raise ValueError(f"Received unexpected value {value} of type {type(value)}")
+    return -value
 
 
 @register.filter(name='currency_format')
-def currency_format(value):
+def currency_format(value: Union[Decimal, float, int, str]) -> str:
     if not value:
         value = 0.00
     return number_format(value, decimal_pos=2, use_l10n=True, force_grouping=True)
 
 
 @register.filter(name='percentage')
-def percentage(value):
-    if value is not None:
+def percentage(value: Union[Decimal, float, int]) -> str:
+    if isinstance(value, str):
+        value = float(value)
+    if isinstance(value, (Decimal, float, int)):
         return '{0:,.2f}%'.format(value * 100)
+    else:
+        raise ValueError(f"Received unexpected value {value} of type {type(value)}")
 
 
 @register.filter(name='last_four')
-def last_four(value: str):
+def last_four(value: str) -> str:
     if value:
         return '*' + value[-4:]
     return ''
@@ -188,6 +195,7 @@ def data_import_job_list_table(context):
     return context
 
 
+# noinspection PyUnusedLocal
 @register.inclusion_tag('django_ledger/data_import/tags/data_import_job_txs_table.html', takes_context=True)
 def data_import_job_txs_pending(context, staged_txs_formset):
     return {
@@ -197,6 +205,7 @@ def data_import_job_txs_pending(context, staged_txs_formset):
     }
 
 
+# noinspection PyUnusedLocal
 @register.inclusion_tag('django_ledger/data_import/tags/data_import_job_txs_imported.html', takes_context=True)
 def data_import_job_txs_imported(context, import_job_model):
     return {
@@ -455,6 +464,7 @@ def modal_action(context, model, http_method: str = 'post', entity_slug: str = N
     }
 
 
+# noinspection PyUnusedLocal
 @register.inclusion_tag('django_ledger/components/modals_v2.html', takes_context=True)
 def modal_action_v2(context, model, action_url: str, message: str, html_id: str, http_method: str = 'get'):
     return {
@@ -494,6 +504,8 @@ def fin_ratio_threshold_class(value, ratio):
             elif value >= ranges['watch']:
                 return 'is-primary'
             return 'is-success'
+    else:
+        return ''   # default class of nothing
 
 
 @register.inclusion_tag('django_ledger/components/feedback_button.html', takes_context=True)

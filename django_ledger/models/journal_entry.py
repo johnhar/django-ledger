@@ -1139,7 +1139,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
 
         # no roles involved
         if not len(role_set):
-            return
+            return None
 
         # determining if investing....
         is_investing_for_ppe = all([
@@ -1305,6 +1305,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def can_generate_je_number(self) -> bool:
         """
@@ -1358,8 +1359,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
     def verify(self,
                txs_qs: Optional[TransactionModelQuerySet] = None,
                force_verify: bool = False,
-               raise_exception: bool = True,
-               **kwargs) -> Tuple[TransactionModelQuerySet, bool]:
+               raise_exception: bool = True) -> Tuple[TransactionModelQuerySet, bool]:
 
         """
         Verifies the validity of the Journal Entry model instance.
@@ -1372,8 +1372,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             Forces re-verification even if already verified.
         raise_exception : bool, default True
             Determines if exceptions are raised on validation failure.
-        kwargs : dict
-            Additional options.
 
         Returns
         -------
@@ -1775,6 +1773,7 @@ class JournalEntryModel(JournalEntryModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def journalentrymodel_presave(instance: JournalEntryModel, **kwargs):
     # noinspection PyProtectedMember
     if instance._state.adding:

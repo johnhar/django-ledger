@@ -266,6 +266,7 @@ class VendorModelAbstract(ContactInfoMixIn,
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_vendor_number(self, commit: bool = False) -> str:
         """

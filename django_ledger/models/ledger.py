@@ -315,11 +315,13 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         for model_class, attr in self.get_wrapper_info.items():
             if getattr(self, attr, None):
                 return getattr(self, attr)
+        return None # is this the expected return value in the error case of not finding the instance?
 
     def get_wrapped_model_url(self):
         if self.has_wrapped_model():
             wrapped_model = self.get_wrapped_model_instance()
             return wrapped_model.get_absolute_url()
+        return None # is this the expected return value in the error case of not finding the url?
 
     def is_posted(self) -> bool:
         """
@@ -472,7 +474,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   commited=commit,
                                   **kwargs)
 
-    def post_journal_entries(self, commit: bool = True, **kwargs):
+    def post_journal_entries(self, commit: bool = True):
         je_model_qs = self.journal_entries.unposted()
         for je_model in je_model_qs:
             je_model.mark_as_posted(raise_exception=False, commit=False)
@@ -537,7 +539,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   commited=commit,
                                   **kwargs)
 
-    def lock_journal_entries(self, commit: bool = True, **kwargs):
+    def lock_journal_entries(self, commit: bool = True):
         je_model_qs = self.journal_entries.unlocked()
         for je_model in je_model_qs:
             je_model.mark_as_locked(raise_exception=False, commit=False)
@@ -773,6 +775,7 @@ class LedgerModel(LedgerModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def ledgermodel_presave(instance: LedgerModel, **kwargs):
     if not instance.has_wrapped_model_info():
         wrapper_instance = instance.get_wrapped_model_instance()

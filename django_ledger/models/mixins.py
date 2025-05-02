@@ -10,15 +10,14 @@ from collections import defaultdict
 from datetime import timedelta, date, datetime
 from decimal import Decimal
 from itertools import groupby
-from typing import Optional, Union, Dict, Tuple
-from uuid import UUID
+from typing import Optional, Union, Dict, Tuple, List
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 from django.core.validators import int_list_validator
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import Model, QuerySet
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from markdown import markdown
@@ -116,7 +115,7 @@ class ContactInfoMixIn(models.Model):
     class Meta:
         abstract = True
 
-    def get_cszc(self):
+    def get_cszc(self) -> str:
         if all([
             self.city,
             self.state,
@@ -124,6 +123,8 @@ class ContactInfoMixIn(models.Model):
             self.country,
         ]):
             return f'{self.city}, {self.state}. {self.zip_code}. {self.country}'
+        else:
+            return ''
 
     def clean(self):
         super().clean()
@@ -310,6 +311,8 @@ class AccrualMixIn(models.Model):
             return self.amount_paid
         elif not self.IS_DEBIT_BALANCE:
             return -self.amount_paid
+        else:
+            return Decimal(0)
 
     def get_amount_earned(self) -> Union[Decimal, float]:
         """
@@ -435,7 +438,7 @@ class AccrualMixIn(models.Model):
     @classmethod
     def split_amount(cls, amount: Union[Decimal, float],
                      unit_split: Dict,
-                     account_uuid: UUID,
+                     account_id: int,
                      account_balance_type: str) -> Dict:
         """
         Splits an amount into different proportions representing the unit splits.
@@ -447,8 +450,8 @@ class AccrualMixIn(models.Model):
             The amount to be split.
         unit_split: dict
             A dictionary with information related to each unit split and proportions.
-        account_uuid: UUID
-            The AccountModel UUID associated with the splits.
+        account_id: id
+            The AccountModel ID/UUID associated with the splits.
         account_balance_type: str
             The AccountModel balance type to determine whether to perform a credit or a debit.
 
@@ -462,15 +465,15 @@ class AccrualMixIn(models.Model):
         split_results = dict()
         for i, (u, p) in enumerate(unit_split.items()):
             if i == SPLIT_LEN:
-                split_results[(account_uuid, u, account_balance_type)] = amount - running_alloc
+                split_results[(account_id, u, account_balance_type)] = amount - running_alloc
             else:
                 alloc = round(p * amount, 2)
-                split_results[(account_uuid, u, account_balance_type)] = alloc
+                split_results[(account_id, u, account_balance_type)] = alloc
                 running_alloc += alloc
         return split_results
 
     # LOCK/UNLOCK Ledger...
-    def lock_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
+    def lock_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
         Convenience method to lock the LedgerModel associated with the Accruable financial instrument.
 
@@ -488,7 +491,7 @@ class AccrualMixIn(models.Model):
             return
         ledger_model.lock(commit, raise_exception=raise_exception)
 
-    def unlock_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
+    def unlock_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
         Convenience method to un-lock the LedgerModel associated with the Accruable financial instrument.
 
@@ -507,7 +510,7 @@ class AccrualMixIn(models.Model):
         ledger_model.unlock(commit, raise_exception=raise_exception)
 
     # POST/UNPOST Ledger...
-    def post_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
+    def post_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
         Convenience method to post the LedgerModel associated with the Accruable financial instrument.
 
@@ -525,7 +528,7 @@ class AccrualMixIn(models.Model):
             return
         ledger_model.post(commit, raise_exception=raise_exception)
 
-    def unpost_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
+    def unpost_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
         Convenience method to un-lock the LedgerModel associated with the Accruable financial instrument.
 
@@ -552,8 +555,7 @@ class AccrualMixIn(models.Model):
                       commit: bool = True,
                       void: bool = False,
                       je_timestamp: Optional[Union[str, date, datetime]] = None,
-                      raise_exception: bool = True,
-                      **kwargs):
+                      raise_exception: bool = True):
 
         """
         Migrates the current Accruable financial instrument into the books. The main objective of the migrate_state
@@ -702,19 +704,19 @@ class AccrualMixIn(models.Model):
             amount_paid_split = self.split_amount(
                 amount=new_state['amount_paid'],
                 unit_split=unit_percents,
-                account_uuid=self.cash_account_id,
+                account_id=self.cash_account_id,
                 account_balance_type='debit'
             )
             amount_prepaid_split = self.split_amount(
                 amount=new_state['amount_receivable'],
                 unit_split=unit_percents,
-                account_uuid=self.prepaid_account_id,
+                account_id=self.prepaid_account_id,
                 account_balance_type='debit'
             )
             amount_unearned_split = self.split_amount(
                 amount=new_state['amount_unearned'],
                 unit_split=unit_percents,
-                account_uuid=self.unearned_account_id,
+                account_id=self.unearned_account_id,
                 account_balance_type='credit'
             )
 
@@ -806,6 +808,7 @@ class AccrualMixIn(models.Model):
         else:
             if raise_exception:
                 raise ValidationError(f'{self.REL_NAME_PREFIX.upper()} state migration not allowed')
+            return None, {}
 
     def void_state(self, commit: bool = False) -> Dict:
         """
@@ -866,10 +869,10 @@ class AccrualMixIn(models.Model):
         """
         if not state:
             state = self.get_state()
-        self.amount_paid = abs(state['amount_paid'])
-        self.amount_receivable = state['amount_receivable']
-        self.amount_unearned = state['amount_unearned']
-        self.amount_earned = state['amount_earned']
+        self.amount_paid: Union[Decimal, float] = abs(state['amount_paid'])
+        self.amount_receivable: Union[Decimal, float] = state['amount_receivable']
+        self.amount_unearned: Union[Decimal, float] = state['amount_unearned']
+        self.amount_earned: Union[Decimal, float] = state['amount_earned']
 
     def clean(self):
 
@@ -1041,6 +1044,7 @@ class PaymentTermsMixIn(models.Model):
             if td.days < 0:
                 return 0
             return td.days
+        return None
 
     # todo: is this necessary?...
     def net_due_group(self):
@@ -1248,7 +1252,7 @@ class ItemizeMixIn(models.Model):
         raise NotImplementedError()
 
     def get_itemtxs_data(self, queryset=None, aggregate_on_db: bool = False, lazy_agg: bool = False) -> \
-            Tuple[Dict, Dict]:
+            Tuple[QuerySet, Dict]:
         """
         Fetches the ItemTransactionModelQuerySet associated with the model.
 
@@ -1301,9 +1305,9 @@ class ItemizeMixIn(models.Model):
         raise NotImplementedError()
 
     def _get_itemtxs_batch(self, itemtxs):
-        ItemTransactionModel = lazy_loader.get_item_transaction_model()
-        EstimateModel = lazy_loader.get_estimate_model()
-        PurchaseOrder = lazy_loader.get_purchase_order_model()
+        _ItemTransactionModel = lazy_loader.get_item_transaction_model()
+        _EstimateModel = lazy_loader.get_estimate_model()
+        _PurchaseOrder = lazy_loader.get_purchase_order_model()
 
         item_model_qs = self.get_item_model_qs()
         item_model_qs = item_model_qs.filter(item_number__in=itemtxs.keys())
@@ -1312,9 +1316,9 @@ class ItemizeMixIn(models.Model):
         if itemtxs.keys() != item_model_qs_map.keys():
             raise ItemizeError(message=f'Got items {itemtxs.keys()}, but only {item_model_qs_map.keys()} exists.')
 
-        if isinstance(self, EstimateModel):
+        if isinstance(self, _EstimateModel):
             return [
-                ItemTransactionModel(
+                _ItemTransactionModel(
                     ce_model=self,
                     item_model=item_model_qs_map[item_number],
                     ce_quantity=i['quantity'],
@@ -1323,9 +1327,9 @@ class ItemizeMixIn(models.Model):
                 ) for item_number, i in itemtxs.items()
             ]
 
-        if isinstance(self, PurchaseOrder):
+        if isinstance(self, _PurchaseOrder):
             return [
-                ItemTransactionModel(
+                _ItemTransactionModel(
                     po_model=self,
                     item_model=item_model_qs_map[item_number],
                     po_quantity=i['quantity'],
@@ -1337,7 +1341,7 @@ class ItemizeMixIn(models.Model):
         InvoiceModel = lazy_loader.get_invoice_model()
 
         return [
-            ItemTransactionModel(
+            _ItemTransactionModel(
                 bill_model=self if isinstance(self, BillModel) else None,
                 invoice_model=self if isinstance(self, InvoiceModel) else None,
                 item_model=item_model_qs_map[item_number],
@@ -1378,19 +1382,20 @@ class ItemizeMixIn(models.Model):
 
             if commit:
 
-                ItemTransactionModel = lazy_loader.get_item_transaction_model()
+                _ItemTransactionModel = lazy_loader.get_item_transaction_model()
 
                 if operation == self.ITEMIZE_APPEND:
-                    ItemTransactionModel.objects.bulk_create(objs=itemtxs_batch)
+                    _ItemTransactionModel.objects.bulk_create(objs=itemtxs_batch)
                     itemtxs_qs, _ = self.get_itemtxs_data(lazy_agg=True)
                     return itemtxs_qs
                 elif operation == self.ITEMIZE_REPLACE:
                     itemtxs_qs, _ = self.get_itemtxs_data(lazy_agg=True)
                     itemtxs_qs.delete()
-                    return ItemTransactionModel.objects.bulk_create(objs=itemtxs_batch)
+                    return _ItemTransactionModel.objects.bulk_create(objs=itemtxs_batch)
             return itemtxs_batch
+        return []
 
-    def validate_itemtxs_qs(self):
+    def validate_itemtxs_qs(self, queryset: Union[QuerySet, List[Model]]):
         """
         Validates that the provided item transaction list is valid.
         """

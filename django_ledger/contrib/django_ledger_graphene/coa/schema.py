@@ -12,7 +12,6 @@ class ChartOfAccountsModelType(DjangoObjectType):
             'uuid',
             'slug',
             'name',
-            'locked'
         ]
         interfaces = (relay.Node,)
 
