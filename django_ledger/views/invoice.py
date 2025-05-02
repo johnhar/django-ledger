@@ -30,6 +30,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class InvoiceModelModelViewQuerySetMixIn:
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = InvoiceModel.objects.for_entity(
@@ -72,6 +73,7 @@ class InvoiceModelCreateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
     }
     for_estimate = False
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, **kwargs):
 
         if not request.user.is_authenticated:
@@ -284,6 +286,7 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
                              extra_tags='is-success')
         return super().form_valid(form)
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, invoice_pk, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
@@ -295,6 +298,7 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
             )
         return super(InvoiceModelUpdateView, self).get(request, *args, **kwargs)
 
+    # noinspection PyMethodOverriding
     def post(self, request, entity_slug, invoice_pk, *args, **kwargs):
         if self.action_update_items:
             if not request.user.is_authenticated:
@@ -323,13 +327,13 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
                 if itemtxs_formset.is_valid():
                     itemtxs_list = itemtxs_formset.save(commit=False)
                     entity_qs = EntityModel.objects.for_user(user_model=self.request.user)
-                    entity_model: EntityModel = get_object_or_404(entity_qs, slug__exact=entity_slug)
+                    get_object_or_404(entity_qs, slug__exact=entity_slug)
 
                     for itemtxs in itemtxs_list:
                         itemtxs.invoice_model_id = invoice_model.uuid
                         itemtxs.clean()
 
-                    itemtxs_list = itemtxs_formset.save()
+                    itemtxs_formset.save()
                     itemtxs_qs = invoice_model.update_amount_due()
                     invoice_model.get_state(commit=True)
                     invoice_model.clean()

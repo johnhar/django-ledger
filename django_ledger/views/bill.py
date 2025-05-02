@@ -78,12 +78,12 @@ class BillModelCreateView(BillModelModelBaseView, CreateView):
         if self.for_purchase_order:
             po_pk = self.kwargs['po_pk']
             po_item_uuids_qry_param = self.request.GET.get('item_uuids')
-            if po_item_uuids_qry_param:
-                try:
-                    po_item_uuids = po_item_uuids_qry_param.split(',')
-                except:
-                    return HttpResponseBadRequest()
-            else:
+            if not po_item_uuids_qry_param:
+                return HttpResponseBadRequest()
+            # noinspection PyBroadException
+            try:
+                po_item_uuids = po_item_uuids_qry_param.split(',')
+            except:
                 return HttpResponseBadRequest()
 
             po_qs = PurchaseOrderModel.objects.for_entity(

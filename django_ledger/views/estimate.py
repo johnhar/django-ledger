@@ -27,6 +27,7 @@ from django_ledger.views import DjangoLedgerSecurityMixIn
 class EstimateModelModelViewQuerySetMixIn:
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             entity_model: EntityModel = getattr(self, 'AUTHORIZED_ENTITY_MODEL')
@@ -201,6 +202,7 @@ class EstimateModelUpdateView(DjangoLedgerSecurityMixIn, EstimateModelModelViewQ
                            'ce_pk': self.kwargs['ce_pk']
                        })
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, ce_pk, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
@@ -212,6 +214,7 @@ class EstimateModelUpdateView(DjangoLedgerSecurityMixIn, EstimateModelModelViewQ
             )
         return super(EstimateModelUpdateView, self).get(request, entity_slug, ce_pk, *args, **kwargs)
 
+    # noinspection PyMethodOverriding
     def post(self, request, entity_slug, ce_pk, *args, **kwargs):
         if self.action_update_items:
 
@@ -229,13 +232,13 @@ class EstimateModelUpdateView(DjangoLedgerSecurityMixIn, EstimateModelModelViewQ
                 if itemtxs_formset.is_valid():
                     itemtxs_list = itemtxs_formset.save(commit=False)
                     entity_qs = EntityModel.objects.for_user(user_model=self.request.user)
-                    entity_model: EntityModel = get_object_or_404(entity_qs, slug__exact=entity_slug)
+                    get_object_or_404(entity_qs, slug__exact=entity_slug)
 
                     for itemtxs in itemtxs_list:
                         itemtxs.ce_model_id = ce_model.uuid
                         itemtxs.clean()
 
-                    itemtxs_list = itemtxs_formset.save()
+                    itemtxs_formset.save()
 
                     ce_model.update_state()
                     ce_model.clean()
