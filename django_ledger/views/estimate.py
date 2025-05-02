@@ -185,7 +185,7 @@ class EstimateModelUpdateView(DjangoLedgerSecurityMixIn, EstimateModelModelViewQ
                     queryset=itemtxs_qs
                 )
         else:
-            itemtxs_qs, _ = ce_model.get_itemtxs_data(queryset=itemtxs_formset.queryset)
+            itemtxs_qs, _ = ce_model.get_itemtxs_data(batch=itemtxs_formset.queryset)
             itemtxs_agg = itemtxs_qs.get_estimate_aggregate()
 
         context['ce_revenue_estimate__sum'] = itemtxs_agg['ce_revenue_estimate__sum']

@@ -382,7 +382,7 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
         if not itemtxs_formset:
             itemtxs_formset_class = get_bill_itemtxs_formset_class(bill_model)
             itemtxs_formset = itemtxs_formset_class(entity_model=entity_model, bill_model=bill_model)
-        itemtxs_qs, itemtxs_agg = bill_model.get_itemtxs_data(queryset=itemtxs_qs)
+        itemtxs_qs, itemtxs_agg = bill_model.get_itemtxs_data(batch=itemtxs_qs)
 
         has_po = any(i.po_model_id for i in itemtxs_qs)
 

@@ -711,7 +711,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         if not itemtxs_qs:
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
-            self.validate_item_transaction_qs(itemtxs_qs=itemtxs_qs)
+            self.validate_item_transaction_batch(batch=itemtxs_qs)
 
         if not itemtxs_qs.count():
             raise EstimateModelValidationError(message='Cannot review an Estimate without items...')
@@ -1099,9 +1099,10 @@ class EstimateModelAbstract(CreateUpdateMixIn,
     def can_migrate_itemtxs(self) -> bool:
         return self.is_draft()
 
-    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False):
+    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False) -> Union[
+        List[ItemTransactionModel], ItemTransactionModelQuerySet]:
         itemtxs_batch = super().migrate_itemtxs(itemtxs=itemtxs, commit=commit, operation=operation)
-        self.update_state(itemtxs_qs=itemtxs_batch)
+        self.update_state(batch=itemtxs_batch)
         self.clean()
 
         if commit:
@@ -1121,23 +1122,23 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             entity_id__exact=self.entity_id
         ).estimates()
 
-    def validate_itemtxs_qs(self, queryset: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
+    def validate_itemtxs_batch(self, batch: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the EstimateModel.
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet or list of ItemTransactionModel.
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel.
             ItemTransactionModelQuerySet to validate.
         """
         valid = all([
-            i.ce_model_id == self.uuid for i in queryset
+            i.ce_model_id == self.uuid for i in batch
         ])
         if not valid:
             raise EstimateModelValidationError(f'Invalid queryset. All items must be assigned to Bill {self.uuid}')
 
     def get_itemtxs_data(self,
-                         queryset: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
+                         batch: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
                          aggregate_on_db: bool = False,
                          lazy_agg: bool = False) -> tuple[
         ItemTransactionModelQuerySet | list[ItemTransactionModel] | Any, None]:
@@ -1147,7 +1148,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet
+        batch: List[ItemTransactionModel] or ItemTransactionModelQuerySet
             ItemTransactionModelQuerySet to use. Avoids additional DB query if provided.
             Validated if provided.
         aggregate_on_db: bool
@@ -1159,12 +1160,12 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         -------
         A tuple: ItemTransactionModelQuerySet or list of ItemTransactionModels, then aggregation metrics dict (None)
         """
-        if not queryset:
-            queryset = self.itemtransactionmodel_set.select_related('item_model').all()
+        if not batch:
+            batch = self.itemtransactionmodel_set.select_related('item_model').all()
         else:
-            self.validate_item_transaction_qs(queryset)
+            self.validate_item_transaction_batch(batch)
         # todo: this needs to return an aggregate for consistency...
-        return queryset, None
+        return batch, None
 
     # ### ItemizeMixIn implementation END...
     def get_itemtxs_annotation(self, itemtxs_qs: Optional[ItemTransactionModelQuerySet] = None):
@@ -1200,21 +1201,22 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             )
         )
 
-    def update_revenue_estimate(self, itemtxs_qs: Optional[ItemTransactionModelQuerySet] = None, commit: bool = False):
+    def update_revenue_estimate(self, itemtxs_batch: Optional[
+        Union[List[ItemTransactionModel], ItemTransactionModelQuerySet]] = None, commit: bool = False):
         """
         Updates the revenue estimate of the EstimateModel instance.
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet
+        itemtxs_batch: List[ItemTransactionModel] or ItemTransactionModelQuerySet
             Prefetched ItemTransactionModelQuerySet. A new ItemTransactionModelQuerySet will be fetched from DB if not
             provided. If provided will be validated.
 
         commit: bool
             If True, the new revenue estimate will be committed into the DB.
         """
-        itemtxs_qs, _ = self.get_itemtxs_data(itemtxs_qs)
-        self.revenue_estimate = sum(i.ce_revenue_estimate for i in itemtxs_qs)
+        itemtxs_batch, _ = self.get_itemtxs_data(itemtxs_batch)
+        self.revenue_estimate = sum(i.ce_revenue_estimate for i in itemtxs_batch)
 
         if commit:
             self.save(update_fields=[
@@ -1222,25 +1224,26 @@ class EstimateModelAbstract(CreateUpdateMixIn,
                 'updated'
             ])
 
-    def update_cost_estimate(self, itemtxs_qs: Optional[ItemTransactionModelQuerySet] = None, commit: bool = False):
+    def update_cost_estimate(self, itemtxs_batch: Optional[
+        Union[List[ItemTransactionModel], ItemTransactionModelQuerySet]] = None, commit: bool = False):
         """
         Updates the cost estimate of the EstimateModel instance.
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet
+        itemtxs_batch: List[ItemTransactionModel] or ItemTransactionModelQuerySet
             Prefetched ItemTransactionModelQuerySet. A new ItemTransactionModelQuerySet will be fetched from DB if not
             provided. If provided will be validated.
         commit: bool
             If True, the new revenue estimate will be committed into the DB.
         """
-        itemtxs_qs, _ = self.get_itemtxs_data(queryset=itemtxs_qs)
+        itemtxs_batch, _ = self.get_itemtxs_data(batch=itemtxs_batch)
         estimates = {
-            'labor': sum(a.ce_cost_estimate for a in itemtxs_qs if a.item_model.is_labor()),
-            'material': sum(a.ce_cost_estimate for a in itemtxs_qs if a.item_model.is_material()),
-            'equipment': sum(a.ce_cost_estimate for a in itemtxs_qs if a.item_model.is_equipment()),
+            'labor': sum(a.ce_cost_estimate for a in itemtxs_batch if a.item_model.is_labor()),
+            'material': sum(a.ce_cost_estimate for a in itemtxs_batch if a.item_model.is_material()),
+            'equipment': sum(a.ce_cost_estimate for a in itemtxs_batch if a.item_model.is_equipment()),
             'other': sum(
-                a.ce_cost_estimate for a in itemtxs_qs
+                a.ce_cost_estimate for a in itemtxs_batch
                 if
                 a.item_model.is_other() or not a.item_model_id or not a.item_model.item_type or a.item_model.is_lump_sum()
             ),
@@ -1260,10 +1263,10 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             ])
 
     def update_state(self,
-                     itemtxs_qs: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None):
-        itemtxs_qs, _ = self.get_itemtxs_data(queryset=itemtxs_qs)
-        self.update_cost_estimate(itemtxs_qs)
-        self.update_revenue_estimate(itemtxs_qs)
+                     batch: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None):
+        batch, _ = self.get_itemtxs_data(batch=batch)
+        self.update_cost_estimate(batch)
+        self.update_revenue_estimate(batch)
 
     # Features...
     def get_cost_estimate(self, as_float: bool = False) -> Union[float, Decimal]:
@@ -1372,24 +1375,24 @@ class EstimateModelAbstract(CreateUpdateMixIn,
     # --- CONTRACT METHODS ---
 
     # Queryset validation....
-    def validate_item_transaction_qs(self, itemtxs_qs: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
+    def validate_item_transaction_batch(self, batch: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the BillModel.
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet
+        batch: ItemTransactionModelQuerySet
             ItemTransactionModelQuerySet to validate.
         """
-        if not isinstance(itemtxs_qs, ItemTransactionModelQuerySet):
+        if not isinstance(batch, ItemTransactionModelQuerySet):
             if not all([
-                isinstance(i, ItemTransactionModel) for i in itemtxs_qs
+                isinstance(i, ItemTransactionModel) for i in batch
             ]):
                 raise EstimateModelValidationError(
                     message='Must pass an instance of ItemTransactionModelQuerySet or a list of ItemTransactionModel'
                 )
         valid = all([
-            i.ce_model_id == self.uuid for i in itemtxs_qs
+            i.ce_model_id == self.uuid for i in batch
         ])
         if not valid:
             raise EstimateModelValidationError(f'Invalid queryset. All items must be assigned to Estimate {self.uuid}')

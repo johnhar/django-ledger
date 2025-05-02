@@ -243,7 +243,7 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
 
         if not itemtxs_formset:
             itemtxs_qs = invoice_model.itemtransactionmodel_set.all().select_related('item_model')
-            itemtxs_qs, itemtxs_agg = invoice_model.get_itemtxs_data(queryset=itemtxs_qs)
+            itemtxs_qs, itemtxs_agg = invoice_model.get_itemtxs_data(batch=itemtxs_qs)
             invoice_itemtxs_formset_class = get_invoice_itemtxs_formset_class(invoice_model)
             itemtxs_formset = invoice_itemtxs_formset_class(
                 entity_slug=self.kwargs['entity_slug'],
@@ -252,7 +252,7 @@ class InvoiceModelUpdateView(DjangoLedgerSecurityMixIn, InvoiceModelModelViewQue
                 queryset=itemtxs_qs
             )
         else:
-            itemtxs_qs, itemtxs_agg = invoice_model.get_itemtxs_data(queryset=itemtxs_formset.queryset)
+            itemtxs_qs, itemtxs_agg = invoice_model.get_itemtxs_data(batch=itemtxs_formset.queryset)
 
         context['itemtxs_formset'] = itemtxs_formset
         context['total_amount__sum'] = itemtxs_agg['total_amount__sum']

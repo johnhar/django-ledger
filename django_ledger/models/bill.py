@@ -509,9 +509,10 @@ class BillModelAbstract(
     def can_migrate_itemtxs(self) -> bool:
         return self.is_draft()
 
-    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False):
+    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False) -> Union[
+        List[ItemTransactionModel], ItemTransactionModelQuerySet]:
         itemtxs_batch = super().migrate_itemtxs(itemtxs=itemtxs, commit=commit, operation=operation)
-        self.update_amount_due(itemtxs_qs=itemtxs_batch)
+        self.update_amount_due(batch=itemtxs_batch)
         self.get_state(commit=True)
 
         if commit:
@@ -528,23 +529,23 @@ class BillModelAbstract(
         ).bills()
 
     # noinspection PyMethodOverriding
-    def validate_itemtxs_qs(self, queryset: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
+    def validate_itemtxs_batch(self, batch: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the BillModel.
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet or list of ItemTransactionModel.
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel.
             ItemTransactionModelQuerySet to validate.
         """
         valid = all([
-            i.bill_model_id == self.uuid for i in queryset
+            i.bill_model_id == self.uuid for i in batch
         ])
         if not valid:
             raise BillModelValidationError(f'Invalid queryset. All items must be assigned to Bill {self.uuid}')
 
     def get_itemtxs_data(self,
-                         queryset: Optional[ItemTransactionModelQuerySet] = None,
+                         batch: Optional[Union[List[ItemTransactionModel], ItemTransactionModelQuerySet]] = None,
                          aggregate_on_db: bool = False,
                          lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, Dict]:
         """
@@ -552,7 +553,7 @@ class BillModelAbstract(
 
         Parameters
         ----------
-        queryset:
+        batch:
             Optional pre-fetched ItemModelQueryset to use. Avoids additional DB query if provided.
         aggregate_on_db: bool
             If True, performs aggregation of ItemsTransactions in the DB resulting in one additional DB query.
@@ -563,23 +564,23 @@ class BillModelAbstract(
         -------
         A tuple: ItemTransactionModelQuerySet, dict
         """
-        if not queryset:
-            queryset = self.itemtransactionmodel_set.all().select_related(
+        if not batch:
+            batch = self.itemtransactionmodel_set.all().select_related(
                 'item_model',
                 'entity_unit',
                 'po_model',
                 'bill_model')
         else:
-            self.validate_itemtxs_qs(queryset)
+            self.validate_itemtxs_batch(batch)
 
-        if aggregate_on_db and isinstance(queryset, ItemTransactionModelQuerySet):
-            return queryset, queryset.aggregate(
+        if aggregate_on_db and isinstance(batch, ItemTransactionModelQuerySet):
+            return batch, batch.aggregate(
                 total_amount__sum=Sum('total_amount'),
                 total_items=Count('uuid')
             )
-        return queryset, {
-            'total_amount__sum': sum(i.total_amount for i in queryset),
-            'total_items': len(queryset)
+        return batch, {
+            'total_amount__sum': sum(i.total_amount for i in batch),
+            'total_items': len(batch)
         } if not lazy_agg else None
 
     # ### ItemizeMixIn implementation END...
@@ -620,7 +621,7 @@ class BillModelAbstract(
         if not queryset:
             queryset = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset)
+            self.validate_itemtxs_batch(queryset)
 
         return queryset.order_by('item_model__expense_account__uuid',
                                  'entity_unit__uuid',
@@ -635,14 +636,14 @@ class BillModelAbstract(
             account_unit_total=Sum('total_amount')
         )
 
-    def update_amount_due(self, itemtxs_qs: Optional[
+    def update_amount_due(self, batch: Optional[
         Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None) -> ItemTransactionModelQuerySet:
         """
         Updates the BillModel amount due.
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet or list of ItemTransactionModel
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel
             Optional pre-fetched ItemTransactionModelQuerySet. Avoids additional DB if provided.
             Queryset is validated if provided.
 
@@ -651,9 +652,9 @@ class BillModelAbstract(
         ItemTransactionModelQuerySet
             Newly fetched of previously fetched ItemTransactionModelQuerySet if provided.
         """
-        itemtxs_qs, itemtxs_agg = self.get_itemtxs_data(queryset=itemtxs_qs)
+        batch, itemtxs_agg = self.get_itemtxs_data(batch=batch)
         self.amount_due = round(itemtxs_agg['total_amount__sum'], 2)
-        return itemtxs_qs
+        return batch
 
     def is_draft(self) -> bool:
         """
@@ -1173,7 +1174,7 @@ class BillModelAbstract(
         if not itemtxs_qs:
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset=itemtxs_qs)
+            self.validate_itemtxs_batch(batch=itemtxs_qs)
 
         if not itemtxs_qs.count():
             raise BillModelValidationError(message=f'Cannot review a {self.__class__.__name__} without items...')
@@ -1417,7 +1418,7 @@ class BillModelAbstract(
         if not itemtxs_qs:
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset=itemtxs_qs)
+            self.validate_itemtxs_batch(batch=itemtxs_qs)
 
         if commit:
             self.save()

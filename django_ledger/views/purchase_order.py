@@ -188,7 +188,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
         # continue here: pass item QS to item_form...
         if not itemtxs_formset:
             itemtxs_qs = self.get_po_itemtxs_qs(po_model)
-            itemtxs_qs, itemtxs_agg = po_model.get_itemtxs_data(queryset=itemtxs_qs)
+            itemtxs_qs, itemtxs_agg = po_model.get_itemtxs_data(batch=itemtxs_qs)
             po_itemtxs_formset_class = get_po_itemtxs_formset_class(po_model)
             itemtxs_formset = po_itemtxs_formset_class(
                 entity_slug=self.kwargs['entity_slug'],
@@ -264,7 +264,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                             itemtxs.po_model_id = po_model.uuid
                         itemtxs.clean()
 
-                    itemtxs_list = itemtxs_formset.save()
+                    itemtxs_formset.save()
                     po_model.update_state()
                     po_model.clean()
                     po_model.save(update_fields=['po_amount',
@@ -388,7 +388,7 @@ class PurchaseOrderModelDetailView(DjangoLedgerSecurityMixIn,
 
         po_model: PurchaseOrderModel = self.object
         po_items_qs, item_data = po_model.get_itemtxs_data(
-            queryset=po_model.itemtransactionmodel_set.all().select_related('item_model', 'bill_model')
+            batch=po_model.itemtransactionmodel_set.all().select_related('item_model', 'bill_model')
         )
         context['po_items'] = po_items_qs
         context['po_total_amount'] = sum(

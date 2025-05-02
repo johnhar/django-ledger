@@ -1241,7 +1241,8 @@ class ItemizeMixIn(models.Model):
     class Meta:
         abstract = True
 
-    def get_item_model_qs(self):
+    # noinspection PyUnresolvedReferences
+    def get_item_model_qs(self) -> 'ItemModelQuerySet':
         """
         Fetches the ItemModelQuerySet eligible to itemize.
 
@@ -1251,14 +1252,15 @@ class ItemizeMixIn(models.Model):
         """
         raise NotImplementedError()
 
-    def get_itemtxs_data(self, queryset=None, aggregate_on_db: bool = False, lazy_agg: bool = False) -> \
-            Tuple[QuerySet, Dict]:
+    # noinspection PyUnresolvedReferences
+    def get_itemtxs_data(self, batch=None, aggregate_on_db: bool = False, lazy_agg: bool = False) -> \
+            Tuple[Union[List['ItemTransactionModel'], 'ItemModelQuerySet'], Dict]:
         """
         Fetches the ItemTransactionModelQuerySet associated with the model.
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet
+        batch: List[ItemTransactionModel] or ItemTransactionModelQuerySet
             Pre-fetched ItemTransactionModelQuerySet. Validated if provided.
         aggregate_on_db: bool
             If True, performs aggregation at the DB layer. Defaults to False.
@@ -1268,12 +1270,12 @@ class ItemizeMixIn(models.Model):
         Returns
         -------
         tuple
-            ItemModelQuerySet, dict
+            Union[List[ItemTransactionModel], ItemModelQuerySet], dict
         """
         raise NotImplementedError()
 
     @staticmethod
-    def validate_itemtxs(itemtxs):
+    def validate_itemtxs(itemtxs: Dict):
         """
         Validates the provided item transaction list.
 
@@ -1281,6 +1283,10 @@ class ItemizeMixIn(models.Model):
         ----------
         itemtxs: dict
             Item transaction list to replace/aggregate.
+
+        Raises
+        ------
+        ItemizeError if itemtxs is not a dict and each value does not have the necessary attributes.
         """
         if isinstance(itemtxs, dict):
             if all([
@@ -1304,7 +1310,22 @@ class ItemizeMixIn(models.Model):
         """
         raise NotImplementedError()
 
-    def _get_itemtxs_batch(self, itemtxs):
+    # noinspection PyUnresolvedReferences
+    def _get_itemtxs_batch(self, itemtxs: Dict) -> List['ItemTransactionModel']:
+        """
+        Converts a dict of document numbers and item transaction attributes to a list of ItemTransactionModels
+        that are appropriate for the self's model type.
+
+        Parameters
+        ----------
+        itemtxs: dict
+        Item transaction list to replace/aggregate.
+
+        Returns
+        -------
+        list
+        List of ItemTransactionModels
+        """
         _ItemTransactionModel = lazy_loader.get_item_transaction_model()
         _EstimateModel = lazy_loader.get_estimate_model()
         _PurchaseOrder = lazy_loader.get_purchase_order_model()
@@ -1337,20 +1358,22 @@ class ItemizeMixIn(models.Model):
                 ) for item_number, i in itemtxs.items()
             ]
 
-        BillModel = lazy_loader.get_bill_model()
-        InvoiceModel = lazy_loader.get_invoice_model()
+        _BillModel = lazy_loader.get_bill_model()
+        _InvoiceModel = lazy_loader.get_invoice_model()
 
         return [
             _ItemTransactionModel(
-                bill_model=self if isinstance(self, BillModel) else None,
-                invoice_model=self if isinstance(self, InvoiceModel) else None,
+                bill_model=self if isinstance(self, _BillModel) else None,
+                invoice_model=self if isinstance(self, _InvoiceModel) else None,
                 item_model=item_model_qs_map[item_number],
                 quantity=i['quantity'],
                 unit_cost=i['unit_cost']
             ) for item_number, i in itemtxs.items()
         ]
 
-    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False):
+    # noinspection PyUnresolvedReferences
+    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False) -> Union[
+        List['ItemTransactionModel'], 'ItemTransactionModelQuerySet']:
         """
         Migrates a predefined item transaction list.
 
@@ -1365,8 +1388,10 @@ class ItemizeMixIn(models.Model):
 
         Returns
         -------
-        list
-            A list of ItemTransactionModel appended or created.
+        Union[list, ItemTransactionModelQuerySet]
+            An empty list if items can't be migrated.
+            A list of ItemTransactionModels if transactions are not committed to DB.
+            An ItemTransactionModelQuerySet if transactions are committed to DB.
         """
         if operation == self.ITEMIZE_UPDATE:
             raise NotImplementedError(f'Operation {operation} not yet implemented.')
@@ -1395,9 +1420,10 @@ class ItemizeMixIn(models.Model):
             return itemtxs_batch
         return []
 
-    def validate_itemtxs_qs(self, queryset: Union[QuerySet, List[Model]]):
+    # noinspection PyUnresolvedReferences
+    def validate_itemtxs_batch(self, batch: Union['ItemTransactionModelQuerySet', List['ItemTransactionModel']]):
         """
-        Validates that the provided item transaction list is valid.
+        Validates that the provided item transaction list or query set is valid.
         """
         raise NotImplementedError()
 

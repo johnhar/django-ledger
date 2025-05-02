@@ -230,7 +230,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
     def get_account_root_node(self,
                               account_model: AccountModel,
                               root_account_qs: Optional[AccountModelQuerySet] = None,
-                              as_queryset: bool = False) -> AccountModel:
+                              as_queryset: bool = False) -> Union[AccountModel, AccountModelQuerySet]:
         """
         Fetches the root node of the ChartOfAccountModel instance. The root node is the highest level of the CoA
         hierarchy. It can be used to traverse the hierarchy of the CoA structure downstream.
@@ -282,9 +282,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
                 raise ChartOfAccountsModelValidationError(message=f'Unable to locate Balance Sheet'
                                                                   ' root node for account code: '
                                                                   f'{account_model.code} {account_model.name}')
-            if as_queryset:
-                return qs
-            return qs.get()
+            return qs if as_queryset else qs.get()
 
         raise ChartOfAccountsModelValidationError(
             message='Adding Root account to Chart of Accounts is not allowed.'
@@ -336,7 +334,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
         root_account = self.get_coa_root_node()
         return AccountModel.dump_bulk(parent=root_account)
 
-    def generate_slug(self, commit: bool = False, raise_exception: bool = False) -> str:
+    def generate_slug(self, commit: bool = False, raise_exception: bool = False):
         """
         Generates and assigns a slug based on the ChartOfAccounts model instance EntityModel information.
 
@@ -601,7 +599,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
         return account_qs
 
 
-    def mark_as_default(self, commit: bool = False, raise_exception: bool = False, **kwargs):
+    def mark_as_default(self, commit: bool = False, raise_exception: bool = False):
         """
         Marks the current Chart of Accounts instances as default for the EntityModel.
 
@@ -663,7 +661,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
             not self.is_default()
         ])
 
-    def mark_as_active(self, commit: bool = False, raise_exception: bool = False, **kwargs):
+    def mark_as_active(self, commit: bool = False, raise_exception: bool = False):
         """
         Marks the current Chart of Accounts as Active.
 
@@ -690,7 +688,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
                     'updated'
                 ])
 
-    def mark_as_inactive(self, commit: bool = False, raise_exception: bool = False, **kwargs):
+    def mark_as_inactive(self, commit: bool = False, raise_exception: bool = False):
         """
         Marks the current Chart of Accounts as Active.
 
@@ -845,6 +843,7 @@ class ChartOfAccountModel(ChartOfAccountModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 @receiver(pre_save, sender=ChartOfAccountModel)
 def chartofaccountsmodel_presave(instance: ChartOfAccountModelAbstract, **kwargs):
     instance.generate_slug()
@@ -854,6 +853,7 @@ def chartofaccountsmodel_presave(instance: ChartOfAccountModelAbstract, **kwargs
         )
 
 
+# noinspection PyUnusedLocal
 @receiver(post_save, sender=ChartOfAccountModel)
 def chartofaccountsmodel_postsave(instance: ChartOfAccountModelAbstract, **kwargs):
     # noinspection PyProtectedMember

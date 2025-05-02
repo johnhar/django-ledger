@@ -335,17 +335,17 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 self.save()
         return self
 
-    def validate_item_transaction_qs(self, queryset: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
+    def validate_item_transaction_batch(self, batch: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the PurchaseOrderModel.
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet or list of ItemTransactionModel.
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel.
             ItemTransactionModelQuerySet to validate.
         """
         valid = all([
-            i.po_model_id == self.uuid for i in queryset
+            i.po_model_id == self.uuid for i in batch
         ])
         if not valid:
             raise PurchaseOrderModelValidationError(f'Invalid queryset. All items must be assigned to PO {self.uuid}')
@@ -355,9 +355,10 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
     def can_migrate_itemtxs(self) -> bool:
         return self.is_draft()
 
-    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False):
+    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False) -> Union[
+        List[ItemTransactionModel], ItemTransactionModelQuerySet]:
         itemtxs_batch = super().migrate_itemtxs(itemtxs=itemtxs, commit=commit, operation=operation)
-        self.update_state(itemtxs_qs=itemtxs_batch)
+        self.update_state(batch=itemtxs_batch)
         self.clean()
         if commit:
             self.save(update_fields=['po_amount',
@@ -371,7 +372,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         ).purchase_orders()
 
     def get_itemtxs_data(self,
-                         queryset: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
+                         batch: Optional[Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None,
                          aggregate_on_db: bool = False,
                          lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, Dict]:
         """
@@ -379,7 +380,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet
+        batch: List[ItemTransactionModel] or ItemTransactionModelQuerySet
             Optional pre-fetched ItemModelQueryset to use. Avoids additional DB query if provided.
             Validated if provided.
         aggregate_on_db: bool
@@ -391,25 +392,25 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         -------
         A tuple: ItemTransactionModelQuerySet, aggregation metrics dict
         """
-        if not queryset:
-            queryset = self.itemtransactionmodel_set.all().select_related('bill_model', 'item_model')
+        if not batch:
+            batch = self.itemtransactionmodel_set.all().select_related('bill_model', 'item_model')
         else:
-            self.validate_item_transaction_qs(queryset)
+            self.validate_item_transaction_batch(batch)
 
-        if aggregate_on_db and isinstance(queryset, ItemTransactionModelQuerySet):
-            return queryset, queryset.aggregate(
+        if aggregate_on_db and isinstance(batch, ItemTransactionModelQuerySet):
+            return batch, batch.aggregate(
                 po_total_amount__sum=Coalesce(Sum('po_total_amount'), 0.0, output_field=models.FloatField()),
                 bill_amount_paid__sum=Coalesce(Sum('bill_model__amount_paid'), 0.0, output_field=models.FloatField()),
                 total_items=Count('uuid')
             )
-        return queryset, {
-            'po_total_amount__sum': sum(i.total_amount for i in queryset),
-            'bill_amount_paid__sum': sum(i.bill_model.amount_paid for i in queryset if i.bill_model_id),
-            'total_items': len(queryset)
+        return batch, {
+            'po_total_amount__sum': sum(i.total_amount for i in batch),
+            'bill_amount_paid__sum': sum(i.bill_model.amount_paid for i in batch if i.bill_model_id),
+            'total_items': len(batch)
         } if not lazy_agg else None
 
     # ### ItemizeMixIn implementation END...
-    def update_state(self, itemtxs_qs: Optional[
+    def update_state(self, batch: Optional[
         Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None) -> Tuple:
 
         """
@@ -417,25 +418,25 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet or list of ItemTransactionModel
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel
 
         Returns
         -------
         tuple
             A tuple of ItemTransactionModels and Aggregation
         """
-        itemtxs_qs, itemtxs_agg = self.get_itemtxs_data(queryset=itemtxs_qs)
+        batch, itemtxs_agg = self.get_itemtxs_data(batch=batch)
 
-        if isinstance(itemtxs_qs, list):
-            self.po_amount = round(sum(a.po_total_amount for a in itemtxs_qs if not a.is_canceled()), 2)
-            self.po_amount_received = round(sum(a.po_total_amount for a in itemtxs_qs if a.is_received()), 2)
-        elif isinstance(itemtxs_qs, ItemTransactionModelQuerySet):
-            total_po_amount = round(sum(i.po_total_amount for i in itemtxs_qs if not i.is_canceled()), 2)
-            total_received = round(sum(i.po_total_amount for i in itemtxs_qs if i.is_received()), 2)
+        if isinstance(batch, list):
+            self.po_amount = round(sum(a.po_total_amount for a in batch if not a.is_canceled()), 2)
+            self.po_amount_received = round(sum(a.po_total_amount for a in batch if a.is_received()), 2)
+        elif isinstance(batch, ItemTransactionModelQuerySet):
+            total_po_amount = round(sum(i.po_total_amount for i in batch if not i.is_canceled()), 2)
+            total_received = round(sum(i.po_total_amount for i in batch if i.is_received()), 2)
             self.po_amount = total_po_amount
             self.po_amount_received = total_received
 
-        return itemtxs_qs, itemtxs_agg
+        return batch, itemtxs_agg
 
     # State...
     def is_draft(self) -> bool:
@@ -974,7 +975,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
                 message=f'Purchase Order {self.po_number} cannot be marked as fulfilled.')
 
         if not po_items:
-            po_items, po_items_agg = self.get_itemtxs_data(queryset=po_items)
+            po_items, po_items_agg = self.get_itemtxs_data(batch=po_items)
 
         self.date_fulfilled = get_localdate() if not date_fulfilled else date_fulfilled
         self.po_amount_received = self.po_amount

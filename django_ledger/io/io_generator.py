@@ -489,7 +489,7 @@ class EntityDataGenerator(LoggingMixIn):
             i.full_clean()
 
         estimate_model.full_clean()
-        estimate_model.update_state(itemtxs_qs=estimate_items)
+        estimate_model.update_state(batch=estimate_items)
         estimate_model.save()
 
         estimate_items = estimate_model.itemtransactionmodel_set.bulk_create(objs=estimate_items)
@@ -537,7 +537,7 @@ class EntityDataGenerator(LoggingMixIn):
         for bi in bill_items:
             bi.full_clean()
 
-        bill_model.update_amount_due(itemtxs_qs=bill_items)
+        bill_model.update_amount_due(batch=bill_items)
         bill_model.itemtransactionmodel_set.bulk_create(bill_items)
         bill_model.full_clean()
         bill_model.save()
@@ -592,7 +592,7 @@ class EntityDataGenerator(LoggingMixIn):
 
         self.logger.info(f'Creating entity purchase order {po_model.po_number}...')
         po_items = po_model.itemtransactionmodel_set.bulk_create(po_items)
-        po_model.update_state(itemtxs_qs=po_items)
+        po_model.update_state(batch=po_items)
         po_model.full_clean()
         po_model.save()
 
@@ -627,7 +627,7 @@ class EntityDataGenerator(LoggingMixIn):
                         po_i.po_item_status = ItemTransactionModel.STATUS_RECEIVED
                         po_i.full_clean()
 
-                    bill_model.update_amount_due(itemtxs_qs=po_items)
+                    bill_model.update_amount_due(batch=po_items)
                     bill_model.full_clean()
                     bill_model.update_state()
                     bill_model.save()
@@ -734,7 +734,7 @@ class EntityDataGenerator(LoggingMixIn):
                     invoice_items.append(itm)
 
         invoice_items = invoice_model.itemtransactionmodel_set.bulk_create(invoice_items)
-        invoice_model.update_amount_due(itemtxs_qs=invoice_items)
+        invoice_model.update_amount_due(itemtxs_batch=invoice_items)
         invoice_model.full_clean()
         invoice_model.save()
 
