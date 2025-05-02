@@ -76,9 +76,8 @@ class InventoryRecountView(DjangoLedgerSecurityMixIn, DetailView):
         entity_slug = self.kwargs['entity_slug']
         return ItemTransactionModel.objects.inventory_count(entity_slug=entity_slug)
 
-    def recorded_inventory(self, queryset=None, as_values=True):
+    def recorded_inventory(self, queryset=None):
         entity_model: EntityModel = self.get_object()
-        user_model = self.request.user
         recorded_qs = entity_model.recorded_inventory(item_qs=queryset)
         return recorded_qs
 

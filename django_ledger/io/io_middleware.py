@@ -429,7 +429,6 @@ class CashFlowStatementIOMiddleware:
         self.IO_DATA[self.CFS_DIGEST_KEY]['net_cash_by_activity']['FINANCING'] = net_cash
 
     def investing(self):
-        group_balances = self.IO_DATA[AccountGroupIOMiddleware.GROUP_BALANCE_KEY]
         investing_activities = dict()
         investing_activities['GROUP_CFS_INVESTING_SECURITIES'] = {
             'description': 'Purchase, Maturity and Sales of Investments & Securities',

@@ -23,6 +23,7 @@ from django_ledger.views.mixins import (
 class EntityModelModelViewQuerySetMixIn:
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = EntityModel.objects.for_user(

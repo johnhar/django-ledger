@@ -68,7 +68,7 @@ class ProductCreateForm(ModelForm):
             self.fields['uom'].queryset = uom_qs
 
         if 'item_type' in self.fields:
-            self.fields['item_type'].choices = ItemModel.ITEM_TYPE_CHOICES_PRODUCT
+            self.fields['item_type'].choices = ItemModel.ITEM_TYPE_VALID_CHOICES
 
     class Meta:
         model = ItemModel

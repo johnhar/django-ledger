@@ -8,7 +8,7 @@ functionality.
 import logging
 from collections import defaultdict
 from datetime import timedelta, date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from itertools import groupby
 from typing import Optional, Union, Dict, Tuple, List
 
@@ -17,7 +17,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 from django.core.validators import int_list_validator
 from django.db import models
-from django.db.models import Model, QuerySet
+from django.db.models import QuerySet
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from markdown import markdown
@@ -271,7 +271,7 @@ class AccrualMixIn(models.Model):
         return self.ledger.posted
 
     # OTHERS...
-    def get_progress(self) -> Union[Decimal, float]:
+    def get_progress(self) -> Decimal:
         """
         Determines the progress amount based on amount due, amount paid and accrue field.
 
@@ -286,7 +286,7 @@ class AccrualMixIn(models.Model):
             return Decimal.from_float(0.00)
         return (self.amount_paid or Decimal.from_float(0.00)) / self.amount_due
 
-    def get_progress_percent(self) -> float:
+    def get_progress_percent(self) -> Decimal:
         """
         Determines the progress amount as percent based on amount due, amount paid and accrue field.
 
@@ -295,9 +295,9 @@ class AccrualMixIn(models.Model):
         float
             Financial instrument progress as a percent.
         """
-        return round(self.get_progress() * 100, 2)
+        return (self.get_progress() * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    def get_amount_cash(self) -> Union[Decimal, float]:
+    def get_amount_cash(self) -> Decimal:
         """
         Determines the impact to the EntityModel cash balance based on the financial instrument debit or credit
         configuration. i.e, Invoices are debit financial instrument because payments to invoices increase cash.
@@ -314,7 +314,7 @@ class AccrualMixIn(models.Model):
         else:
             return Decimal(0)
 
-    def get_amount_earned(self) -> Union[Decimal, float]:
+    def get_amount_earned(self) -> Decimal:
         """
         Determines the impact to the EntityModel earnings based on financial instrument progress.
 
@@ -329,7 +329,7 @@ class AccrualMixIn(models.Model):
         else:
             return self.amount_paid or Decimal.from_float(0.00)
 
-    def get_amount_prepaid(self) -> Union[Decimal, float]:
+    def get_amount_prepaid(self) -> Decimal:
         """
         Determines the impact to the EntityModel Accounts Receivable based on financial instrument progress.
 
@@ -353,7 +353,7 @@ class AccrualMixIn(models.Model):
                 return payments - self.get_amount_earned()
         return Decimal.from_float(0.00)
 
-    def get_amount_unearned(self) -> Union[Decimal, float]:
+    def get_amount_unearned(self) -> Decimal:
         """
         Determines the impact to the EntityModel Accounts Payable based on financial instrument progress.
 
@@ -376,7 +376,7 @@ class AccrualMixIn(models.Model):
                 return amt_earned - self.amount_paid
         return Decimal.from_float(0.00)
 
-    def get_amount_open(self) -> Union[Decimal, float]:
+    def get_amount_open(self) -> Decimal:
         """
         Determines the open amount left to be progressed.
 
@@ -847,6 +847,7 @@ class AccrualMixIn(models.Model):
         -------
         dict
             A dictionary with new amount_paid, amount_receivable, amount_unearned and amount_earned as keys.
+            Values are Decimal type.
         """
         new_state = {
             'amount_paid': self.get_amount_cash(),
@@ -869,17 +870,17 @@ class AccrualMixIn(models.Model):
         """
         if not state:
             state = self.get_state()
-        self.amount_paid: Union[Decimal, float] = abs(state['amount_paid'])
-        self.amount_receivable: Union[Decimal, float] = state['amount_receivable']
-        self.amount_unearned: Union[Decimal, float] = state['amount_unearned']
-        self.amount_earned: Union[Decimal, float] = state['amount_earned']
+        self.amount_paid: Decimal = abs(state['amount_paid'])
+        self.amount_receivable: Decimal = state['amount_receivable']
+        self.amount_unearned: Decimal = state['amount_unearned']
+        self.amount_earned: Decimal = state['amount_earned']
 
     def clean(self):
 
         super().clean()
 
         if not self.amount_due:
-            self.amount_due = 0
+            self.amount_due: Decimal = Decimal.from_float(0.00)
 
         if self.cash_account_id is None:
             raise ValidationError('Must provide a cash account.')

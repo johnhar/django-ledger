@@ -380,7 +380,7 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
 
         itemtxs_qs = itemtxs_formset.get_queryset() if itemtxs_formset else None
         if not itemtxs_formset:
-            itemtxs_formset_class = get_bill_itemtxs_formset_class(bill_model)
+            itemtxs_formset_class = get_bill_itemtxs_formset_class()
             itemtxs_formset = itemtxs_formset_class(entity_model=entity_model, bill_model=bill_model)
         itemtxs_qs, itemtxs_agg = bill_model.get_itemtxs_data(batch=itemtxs_qs)
 
@@ -450,7 +450,7 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
 
             self.object = bill_model
 
-            bill_itemtxs_formset_class = get_bill_itemtxs_formset_class(bill_model)
+            bill_itemtxs_formset_class = get_bill_itemtxs_formset_class()
             itemtxs_formset = bill_itemtxs_formset_class(
                 request.POST,
                 bill_model=bill_model,

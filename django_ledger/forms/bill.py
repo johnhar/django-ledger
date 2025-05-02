@@ -285,7 +285,7 @@ class BaseBillItemTransactionFormset(BaseModelFormSet):
                 form.fields['entity_unit'].disabled = True
 
 
-def get_bill_itemtxs_formset_class(bill_model: BillModel):
+def get_bill_itemtxs_formset_class():
     BillItemTransactionFormset = modelformset_factory(
         model=ItemTransactionModel,
         form=BillItemTransactionForm,

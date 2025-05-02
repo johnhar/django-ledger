@@ -100,16 +100,19 @@ class JournalEntryModelInLine(TabularInline):
 
 
 class LedgerModelAdmin(ModelAdmin):
+    # noinspection PyUnresolvedReferences
     readonly_fields = [
         'entity',
         'posted',
         'locked'
     ]
+    # noinspection PyUnresolvedReferences
     list_filter = [
         'posted',
         'locked',
         'entity__name'
     ]
+    # noinspection PyUnresolvedReferences
     list_display = [
         'name',
         'ledger_xid',

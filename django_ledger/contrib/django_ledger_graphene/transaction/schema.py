@@ -26,6 +26,7 @@ class TransactionsQuery(graphene.ObjectType):
         pk_je=graphene.UUID(),
         pk_ledger=graphene.UUID())
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def resolve_all_transactions(info, slug_name, pk_je, pk_ledger, **kwargs):
         if info.context.user.is_authenticated:

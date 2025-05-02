@@ -19,6 +19,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class CustomerModelModelViewQuerySetMixIn:
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = CustomerModel.objects.for_entity(

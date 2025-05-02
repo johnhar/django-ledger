@@ -23,6 +23,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class ImportJobModelViewBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = ImportJobModel.objects.for_entity(

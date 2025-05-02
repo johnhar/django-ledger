@@ -61,12 +61,18 @@ class EntityDataGenerator(LoggingMixIn):
         The Django user model that administers the entity.
     entity_model : EntityModel
         The Entity model to populate.
-    start_dttm: datetime
+    start_date: datetime
         The start datetime for new transactions. All transactions will be posted no earlier than this date.
+    local_date: datetime
+        The local date (today).
+    tx_quantity: int
+        The number of transactions to generate.
+    localtime: datetime
+        The local time.
     capital_contribution: Decimal
         The initial capital contribution amount for the Entity Model. This will help fund the entity.
-    days_forward: int
-        The number of days to span from the start_dttm for new transactions.
+    DAYS_FORWARD: int
+        The number of days to span from the start_date for new transactions.
 
     """
 
@@ -492,7 +498,7 @@ class EntityDataGenerator(LoggingMixIn):
         estimate_model.update_state(batch=estimate_items)
         estimate_model.save()
 
-        estimate_items = estimate_model.itemtransactionmodel_set.bulk_create(objs=estimate_items)
+        estimate_model.itemtransactionmodel_set.bulk_create(objs=estimate_items)
 
         if random() > 0.25:
             date_in_review = self.get_next_timestamp(date_draft)
@@ -743,7 +749,7 @@ class EntityDataGenerator(LoggingMixIn):
 
             try:
                 invoice_model.mark_as_review(commit=True, date_in_review=date_review)
-            except InvoiceModelValidationError as e:
+            except InvoiceModelValidationError:
                 # invoice cannot be marked as in review...
                 return
 
@@ -797,7 +803,7 @@ class EntityDataGenerator(LoggingMixIn):
 
     def create_closing_entry(self):
         closing_date = self.start_date + timedelta(days=int(self.DAYS_FORWARD / 2))
-        ce_model, ce_txs = self.entity_model.close_books_for_month(
+        self.entity_model.close_books_for_month(
             year=closing_date.year,
             month=closing_date.month,
             post_closing_entry=True

@@ -39,7 +39,7 @@ class EntityModelTests(DjangoLedgerBaseTest):
             start_year = self.START_DATE.year
             start_month = self.START_DATE.month
             while True:
-                ce_list = entity_model.close_books_for_month(year=start_year, month=start_month)
+                entity_model.close_books_for_month(year=start_year, month=start_month)
                 if all([
                     self.START_DATE.year + 1 == start_year,
                     self.START_DATE.month == start_month
@@ -139,6 +139,7 @@ class EntityModelTests(DjangoLedgerBaseTest):
 
         # creating a number of entities...
         for ent_data in self.TEST_DATA:
+            # noinspection PyUnusedLocal
             response = self.CLIENT.post(entity_create_url, data=ent_data, follow=True)
             # user must be redirected if success...
             # self.assertContains(response, status_code=200, text='My Dashboard')
@@ -187,7 +188,7 @@ class EntityModelTests(DjangoLedgerBaseTest):
     def test_ui_entity_update(self):
 
         self.login_client()
-        entity_models = self.create_entity_models()
+        self.create_entity_models()
         entity_list_url = reverse('django_ledger:entity-list')
         an_entity: EntityModel = choice(self.ENTITY_MODEL_QUERYSET)
 

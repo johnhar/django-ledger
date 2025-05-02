@@ -22,6 +22,7 @@ class EntityModelType(DjangoObjectType):
     is_admin = graphene.Boolean()
 
     def resolve_is_admin(self, info):
+        # noinspection PyTypeChecker
         entity_model: EntityModel = self
         return entity_model.is_admin_user(user_model=info.context.resource_owner)
 
@@ -46,6 +47,7 @@ class EntityModelTypeDetail(EntityModelType):
         ]
 
 
+# noinspection PyUnusedLocal
 class EntityModelQuery(graphene.ObjectType):
     entity_model_list_all = graphene.List(EntityModelType)
     entity_model_list_visible = graphene.List(EntityModelType)

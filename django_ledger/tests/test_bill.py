@@ -268,15 +268,15 @@ class BillModelTests(DjangoLedgerBaseTest):
 
         a_vendor_model = choice(entity_model.get_vendors())
 
-        bill_data = {
-            'vendor': a_vendor_model.uuid,
-            'date_draft': get_localdate(),
-            'terms': BillModel.TERMS_NET_30,
-            'cash_account_id': account_qs.filter(role__exact=ASSET_CA_CASH),
-            'prepaid_account_id': account_qs.filter(role__exact=ASSET_CA_PREPAID),
-            'unearned_account_id': account_qs.filter(role__exact=LIABILITY_CL_ACC_PAYABLE),
-        }
-
+        # bill_data = {
+        #     'vendor': a_vendor_model.uuid,
+        #     'date_draft': get_localdate(),
+        #     'terms': BillModel.TERMS_NET_30,
+        #     'cash_account_id': account_qs.filter(role__exact=ASSET_CA_CASH),
+        #     'prepaid_account_id': account_qs.filter(role__exact=ASSET_CA_PREPAID),
+        #     'unearned_account_id': account_qs.filter(role__exact=LIABILITY_CL_ACC_PAYABLE),
+        # }
+        #
         # create_response = self.CLIENT.post(bill_create_url, data=bill_data, follow=True)
         # self.assert
         # self.assertFormError(create_response, form='form', field=None,

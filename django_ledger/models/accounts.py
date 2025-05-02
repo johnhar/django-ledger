@@ -492,19 +492,14 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
         Property that retrieves the `coa_slug` attribute from the object. If the attribute
         is not found, it fetches the `slug` attribute from the `coa_model`.
 
-        Attributes:
-            _coa_slug (str): Cached value of the `coa_slug` if it exists.
-            coa_model (Any): Object containing the `slug` attribute that serves
-                as a fallback when `_coa_slug` is not present.
-
         Returns:
             str: The value of `_coa_slug` if defined, or the `slug` attribute from
             `coa_model` if `_coa_slug` is not available.
         """
         try:
-            return getattr(self, '_coa_slug')
+            return getattr(self, '_coa_slug')       # comes from a DB annotation
         except AttributeError:
-            return self.coa_model.slug
+            return self.coa_model.slug              # comes frm the model field
 
     @property
     def entity_slug(self):
@@ -769,7 +764,7 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
             self.locked is True
         ])
 
-    def lock(self, commit: bool = True, raise_exception: bool = True, **kwargs):
+    def lock(self, commit: bool = True, raise_exception: bool = True):
         if not self.can_lock():
             if raise_exception:
                 raise AccountModelValidationError(
@@ -784,7 +779,7 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
                 'updated'
             ])
 
-    def unlock(self, commit: bool = True, raise_exception: bool = True, **kwargs):
+    def unlock(self, commit: bool = True, raise_exception: bool = True):
         if not self.can_unlock():
             if raise_exception:
                 raise AccountModelValidationError(
@@ -799,7 +794,7 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
                 'updated'
             ])
 
-    def activate(self, commit: bool = True, raise_exception: bool = True, **kwargs):
+    def activate(self, commit: bool = True, raise_exception: bool = True):
         """
         Checks if the Account Model instance can be activated, then Activates the AccountModel instance.
         Raises exception if AccountModel cannot be activated.
@@ -826,7 +821,7 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
                 'updated'
             ])
 
-    def deactivate(self, commit: bool = True, raise_exception: bool = True, **kwargs):
+    def deactivate(self, commit: bool = True, raise_exception: bool = True):
         """
         Checks if the Account Model instance can be de-activated, then De-activates the AccountModel instance.
         Raises exception if AccountModel cannot be de-activated.
@@ -1093,6 +1088,7 @@ class AccountModel(AccountModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def accountmodel_presave(instance: AccountModel, **kwargs):
     if instance.role_default is False:
         instance.role_default = None

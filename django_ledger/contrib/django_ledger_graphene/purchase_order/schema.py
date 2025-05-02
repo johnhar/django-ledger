@@ -20,6 +20,7 @@ class PurchaseOrderQuery(graphene.ObjectType):
     all_purchase_order = DjangoFilterConnectionField(
         PurchaseOrderNode, slug_name=graphene.String(required=True))
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def resolve_all_purchase_order(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:

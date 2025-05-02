@@ -24,7 +24,8 @@ class EntityManagementInLine(TabularInline):
 class EntityUnitModelInLineFormSet(BaseInlineFormSet):
 
     def save_new(self, form, commit=True):
-        setattr(form.instance, self.fk.name, self.instance)
+        # noinspection PyUnresolvedReferences
+        setattr(form.instance, self.fk.name, self.instance)     # self.fk.name comes from the parent class
         if commit:
             unit_model = EntityUnitModel.add_root(
                 instance=super().save_new(form, commit=False)
@@ -49,6 +50,7 @@ class EntityUnitModelInLine(TabularInline):
     ]
 
 
+# noinspection PyUnresolvedReferences
 class EntityModelAdmin(ModelAdmin):
     list_display = [
         'slug',
@@ -181,6 +183,7 @@ class EntityModelAdmin(ModelAdmin):
 
     dashboard_link.short_description = 'Dashboard'
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def add_code_of_accounts(request, queryset):
         lt = get_localtime().isoformat()
@@ -191,6 +194,7 @@ class EntityModelAdmin(ModelAdmin):
                 assign_as_default=False
             )
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def populate_random_data(request, queryset):
         for entity_model in queryset:

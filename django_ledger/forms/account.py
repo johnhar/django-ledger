@@ -24,8 +24,6 @@ class AccountModelCreateForm(ModelForm):
 
     Attributes
     ----------
-    ENTITY_MODEL : Model
-        The entity model being used in the form.
     COA_MODEL : Model
         The Chart of Account Model being used in the form.
     """

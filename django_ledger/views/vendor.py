@@ -19,6 +19,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class VendorModelModelBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = VendorModel.objects.for_entity(
