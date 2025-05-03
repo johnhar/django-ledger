@@ -19,7 +19,7 @@ class AccountNode(DjangoObjectType):
         interfaces = (relay.Node,)
 
 
-class Accountlist_Query(graphene.ObjectType):
+class AccountListQuery(graphene.ObjectType):
     all_accounts = DjangoFilterConnectionField(AccountNode, slug_name=graphene.String(required=True))
 
     # noinspection PyUnusedLocal

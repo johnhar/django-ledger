@@ -21,7 +21,7 @@ class BillNode(DjangoObjectType):
         interfaces = (relay.Node,)
 
 
-class Bill_list_Query(graphene.ObjectType):
+class BillListQuery(graphene.ObjectType):
     all_bills = DjangoFilterConnectionField(BillNode, slug_name=graphene.String(required=True))
 
     # noinspection PyUnusedLocal

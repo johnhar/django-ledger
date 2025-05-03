@@ -20,7 +20,7 @@ class BankaccountNode(DjangoObjectType):
         }
         interfaces = (relay.Node,)
 
-class Bank_account_Query(graphene.ObjectType):
+class BankAccountQuery(graphene.ObjectType):
     all_bankaccounts = DjangoFilterConnectionField(BankaccountNode, slug_name=graphene.String(required=True))
 
     # noinspection PyUnusedLocal
@@ -33,4 +33,5 @@ class Bank_account_Query(graphene.ObjectType):
         ).select_related('account_model')
         else:
             return BankAccountModel.objects.none()
+
 

@@ -8,9 +8,9 @@ class Query(
     EntityModelQuery,
     # ChartOfAccountsModelQuery
     # CustomerQuery,
-    # Bill_list_Query,
+    # BillListQuery,
     # AccountListQuery,
-    # Bank_account_Query        ,
+    # BankAccountQuery        ,
     # ChartOfAccountsQuery,
     # UnitOfMeasureQuery,
     # VendorsQuery,
