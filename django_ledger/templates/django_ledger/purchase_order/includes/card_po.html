@@ -62,7 +62,8 @@
 
                 {# MARK DRAFT #}
                 {% if po_model.can_draft %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_draft_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_draft_html_id }}')"
                        id="{{ po_model.get_mark_as_review_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Draft' %}</a>
                     {# MARK AS DRAFT MODAL #}
@@ -71,7 +72,8 @@
 
                 {# MARK REVIEW #}
                 {% if po_model.can_review %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_review_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_review_html_id }}')"
                        id="{{ po_model.get_mark_as_review_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Review' %}</a>
                     {# MARK AS REVIEW MODAL #}
@@ -80,7 +82,8 @@
 
                 {# MARK APPROVED #}
                 {% if po_model.can_approve %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_approved_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_approved_html_id }}')"
                        id="{{ po_model.get_mark_as_approved_html_id }}-button"
                        class="card-footer-item has-text-success has-text-centered">{% trans 'Mark as Approved' %}</a>
                     {# MARK AS APPROVED MODAL #}
@@ -89,7 +92,8 @@
 
                 {# FULFILL BUTTON #}
                 {% if po_model.can_fulfill %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_fulfilled_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_fulfilled_html_id }}')"
                        id="{{ po_model.get_mark_as_fulfilled_html_id }}-button"
                        class="card-footer-item has-text-success has-text-centered">{% trans 'Fulfill' %}</a>
                     {# MARK AS DELETE MODAL #}
@@ -98,7 +102,8 @@
 
                 {# DELETE BUTTON #}
                 {% if po_model.can_delete %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_delete_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_delete_html_id }}')"
                        id="{{ po_model.get_mark_as_delete_html_id }}-button"
                        class="card-footer-item has-text-danger has-text-centered">{% trans 'Delete' %}</a>
                     {# MARK AS DELETE MODAL #}
@@ -107,7 +112,8 @@
 
                 {# VOID BUTTON #}
                 {% if po_model.can_void %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_void_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_void_html_id }}')"
                        id="{{ po_model.get_mark_as_void_html_id }}-button"
                        class="card-footer-item has-text-danger has-text-centered">{% trans 'Void' %}</a>
                     {# MARK AS VOID MODAL #}
@@ -116,7 +122,8 @@
 
                 {# CANCEL BUTTON #}
                 {% if po_model.can_cancel %}
-                    <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_canceled_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ po_model.get_mark_as_canceled_html_id }}')"
                        id="{{ po_model.get_mark_as_canceled_html_id }}-button"
                        class="card-footer-item has-text-danger has-text-centered">{% trans 'Cancel' %}</a>
                     {# MARK AS CANCELED MODAL #}

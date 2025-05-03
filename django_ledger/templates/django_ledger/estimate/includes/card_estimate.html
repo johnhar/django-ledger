@@ -57,7 +57,8 @@
 
         {# MARK DRAFT #}
         {% if estimate_model.can_draft %}
-            <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_draft_html_id }}')"
+            <!--suppress JSUnresolvedReference -->
+          <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_draft_html_id }}')"
                id="{{ estimate_model.get_mark_as_draft_html_id }}-button"
                class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Draft' %}</a>
             {# MARK AS DRAFT MODAL #}
@@ -66,7 +67,8 @@
 
         {# MARK REVIEW #}
         {% if estimate_model.can_review %}
-            <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_review_html_id }}')"
+            <!--suppress JSUnresolvedReference -->
+          <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_review_html_id }}')"
                id="{{ estimate_model.get_mark_as_review_html_id }}-button"
                class="card-footer-item has-text-warning has-text-centered">{% trans 'Mark as Review' %}</a>
             {# MARK AS DRAFT MODAL #}
@@ -75,7 +77,8 @@
 
         {# MARK APPROVE #}
         {% if estimate_model.can_approve %}
-            <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_approved_html_id }}')"
+            <!--suppress JSUnresolvedReference -->
+          <a onclick="djLedger.toggleModal('{{ estimate_model.get_mark_as_approved_html_id }}')"
                id="{{ estimate_model.get_mark_as_approved_html_id }}-button"
                class="card-footer-item has-text-success has-text-centered">{% trans 'Approve' %}</a>
             {# MARK AS DRAFT MODAL #}

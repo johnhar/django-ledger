@@ -39,7 +39,8 @@
                 <a href="{% url 'django_ledger:invoice-update' entity_slug=entity_slug invoice_pk=invoice.uuid %}"
                    class="card-footer-item has-text-warning-dark has-text-centered">{% trans 'Update' %}</a>
                 {% if not invoice.is_paid %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_html_id }}')"
                        class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Paid' %}</a>
                 {% endif %}
             </footer>
@@ -138,7 +139,8 @@
 
                 {# MARK DRAFT #}
                 {% if invoice.can_draft %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_draft_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_draft_html_id }}')"
                        id="{{ invoice.get_mark_as_review_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Draft' %}</a>
                     {# MARK AS DRAFT MODAL #}
@@ -147,7 +149,8 @@
 
                 {# MARK REVIEW #}
                 {% if invoice.can_review %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_review_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_review_html_id }}')"
                        id="{{ invoice.get_mark_as_review_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered">{% trans 'Mark as Review' %}</a>
                     {# MARK AS REVIEW MODAL #}
@@ -156,7 +159,8 @@
 
                 {# MARK APPROVED #}
                 {% if invoice.can_approve %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_approved_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_approved_html_id }}')"
                        id="{{ invoice.get_mark_as_approved_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered has-text-success">{% trans 'Approve' %}</a>
                     {# MARK AS APPROVED MODAL #}
@@ -165,7 +169,8 @@
 
                 {# MARK PAID #}
                 {% if invoice.can_pay %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_paid_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_paid_html_id }}')"
                        id="{{ invoice.get_mark_as_paid_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered has-text-success">{% trans 'Mark as Paid' %}</a>
                     {# MARK AS PAID MODAL #}
@@ -174,7 +179,8 @@
 
                 {# MARK VOID #}
                 {% if invoice.can_void %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_void_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_void_html_id }}')"
                        id="{{ invoice.get_mark_as_void_html_id }}-button"
                        class="card-footer-item has-text-info has-text-centered has-text-danger">{% trans 'Void' %}</a>
                     {# MARK AS PAID MODAL #}
@@ -183,7 +189,8 @@
 
                 {# MARK CANCELED #}
                 {% if invoice.can_cancel %}
-                    <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_canceled_html_id }}')"
+                    <!--suppress JSUnresolvedReference -->
+                  <a onclick="djLedger.toggleModal('{{ invoice.get_mark_as_canceled_html_id }}')"
                        id="{{ invoice.get_mark_as_canceled_html_id }}-button"
                        class="card-footer-item has-text-danger has-text-centered has-text-weight-bold">{% trans 'Cancel' %}</a>
                     {# MARK AS PAID MODAL #}
