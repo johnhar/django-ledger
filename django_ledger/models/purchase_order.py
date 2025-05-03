@@ -393,6 +393,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         A tuple: ItemTransactionModelQuerySet, aggregation metrics dict
         """
         if not batch:
+            # noinspection PyUnresolvedReferences
             batch = self.itemtransactionmodel_set.all().select_related('bill_model', 'item_model')
         else:
             self.validate_item_transaction_batch(batch)
@@ -836,6 +837,7 @@ class PurchaseOrderModelAbstract(CreateUpdateMixIn,
         self.po_status = self.PO_STATUS_APPROVED
         self.clean()
         if commit:
+            # noinspection PyUnresolvedReferences
             self.itemtransactionmodel_set.all().update(po_item_status=ItemTransactionModel.STATUS_NOT_ORDERED)
             self.save(update_fields=[
                 'date_approved',

@@ -8,9 +8,7 @@ from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from django_ledger.io.io_core import get_localdate
-from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_DEFERRED_REVENUE, \
-    LIABILITY_CL_ACC_PAYABLE
+from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_DEFERRED_REVENUE
 from django_ledger.models import EntityModel, BillModel, VendorModel
 from django_ledger.tests.base import DjangoLedgerBaseTest
 from django_ledger.urls.bill import urlpatterns as bill_urls
@@ -266,6 +264,7 @@ class BillModelTests(DjangoLedgerBaseTest):
         account_qs = entity_model.get_default_coa_accounts()
         len(account_qs)
 
+        # noinspection PyUnusedLocal
         a_vendor_model = choice(entity_model.get_vendors())
 
         # bill_data = {

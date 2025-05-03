@@ -709,6 +709,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
             return
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
             self.validate_item_transaction_batch(batch=itemtxs_qs)
@@ -1161,6 +1162,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
         A tuple: ItemTransactionModelQuerySet or list of ItemTransactionModels, then aggregation metrics dict (None)
         """
         if not batch:
+            # noinspection PyUnresolvedReferences
             batch = self.itemtransactionmodel_set.select_related('item_model').all()
         else:
             self.validate_item_transaction_batch(batch)
@@ -1465,6 +1467,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
 
     def get_po_amount(self, po_qs: PurchaseOrderModelQuerySet = None) -> dict:
         if not po_qs:
+            # noinspection PyUnresolvedReferences
             po_qs = self.purchaseordermodel_set.all().active()
         else:
             po_qs = self.validate_po_queryset(po_qs=po_qs)
@@ -1473,6 +1476,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
 
     def get_billed_amount(self, bill_qs: Optional[BillModelQuerySet] = None) -> dict:
         if not bill_qs:
+            # noinspection PyUnresolvedReferences
             bill_qs = self.billmodel_set.all().active()
         else:
             bill_qs = self.validate_bill_queryset(bill_qs=bill_qs)
@@ -1487,6 +1491,7 @@ class EstimateModelAbstract(CreateUpdateMixIn,
 
     def get_invoiced_amount(self, invoice_qs: Optional[InvoiceModelQuerySet] = None) -> dict:
         if not invoice_qs:
+            # noinspection PyUnresolvedReferences
             invoice_qs = self.invoicemodel_set.all().active()
         else:
             invoice_qs = self.validate_invoice_queryset(invoice_qs=invoice_qs)

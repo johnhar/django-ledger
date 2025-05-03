@@ -20,7 +20,7 @@ Totals will be calculated and associated with the containing model at the time o
 """
 from decimal import Decimal
 from string import ascii_lowercase, digits
-from typing import Optional
+from typing import Optional, TypeVar, Generic
 from uuid import uuid4, UUID
 
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -150,10 +150,30 @@ class UnitOfMeasureModelAbstract(CreateUpdateMixIn):
 
 
 # ITEM MODEL....
-class ItemModelQuerySet(QuerySet):
+T = TypeVar('T', bound='ItemModel')
+QS = TypeVar('QS', bound='ItemModelQuerySet')
+
+
+class ItemModelQuerySet(QuerySet[T], Generic[T]):
     """
     A custom-defined ItemModelQuerySet that implements custom QuerySet methods related to the ItemModel.
     """
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
+
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
 
     def active(self):
         """

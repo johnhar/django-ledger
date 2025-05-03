@@ -107,6 +107,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
 
     def migrate(self):
 
+        # noinspection PyUnresolvedReferences
         ce_txs = self.closingentrytransactionmodel_set.all().select_related(
             'account_model',
             'unit_model'

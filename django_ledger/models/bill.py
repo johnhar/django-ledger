@@ -565,6 +565,7 @@ class BillModelAbstract(
         A tuple: ItemTransactionModelQuerySet, dict
         """
         if not batch:
+            # noinspection PyUnresolvedReferences
             batch = self.itemtransactionmodel_set.all().select_related(
                 'item_model',
                 'entity_unit',
@@ -619,6 +620,7 @@ class BillModelAbstract(
         """
 
         if not queryset:
+            # noinspection PyUnresolvedReferences
             queryset = self.itemtransactionmodel_set.all()
         else:
             self.validate_itemtxs_batch(queryset)
@@ -1172,6 +1174,7 @@ class BillModelAbstract(
                 )
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
             self.validate_itemtxs_batch(batch=itemtxs_qs)
@@ -1416,6 +1419,7 @@ class BillModelAbstract(
         self.clean()
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
             self.validate_itemtxs_batch(batch=itemtxs_qs)

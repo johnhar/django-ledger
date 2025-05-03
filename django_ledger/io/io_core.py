@@ -1659,6 +1659,7 @@ class IOReportMixIn:
         IODigestContextManager
             A context manager containing the processed income statement data.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             from_date=from_date,
@@ -1784,6 +1785,7 @@ class IOReportMixIn:
         IODigestContextManager
             Context manager providing the digested cash flow statement.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             from_date=from_date,
@@ -1909,6 +1911,7 @@ class IOReportMixIn:
             Represents the context manager containing the digested financial
             statements for the specified date range.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             from_date=from_date,
             to_date=to_date,

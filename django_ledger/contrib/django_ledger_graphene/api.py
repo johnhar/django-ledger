@@ -32,6 +32,7 @@ class Query(
 #     pass
 
 
+# noinspection PyTypeChecker
 schema = graphene.Schema(
     types=[
         EntityModelType,

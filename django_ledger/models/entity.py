@@ -24,7 +24,7 @@ from decimal import Decimal
 from itertools import zip_longest
 from random import choices
 from string import ascii_lowercase, digits
-from typing import Tuple, Union, Optional, List, Dict, Set
+from typing import Tuple, Union, Optional, List, Dict, Set, TypeVar, Generic
 from uuid import uuid4, UUID
 
 from django.contrib.auth import get_user_model
@@ -64,8 +64,9 @@ ENTITY_RANDOM_SLUG_SUFFIX = ascii_lowercase + digits
 class EntityModelValidationError(ValidationError):
     pass
 
+T = TypeVar('T', bound='ClosingEntryTransactionModel')
 
-class EntityModelQuerySet(MP_NodeQuerySet):
+class EntityModelQuerySet(MP_NodeQuerySet[T], Generic[T]):
     """
     A custom defined EntityModel QuerySet.
     Inherits from the Materialized Path Node QuerySet Class from Django Treebeard.
@@ -542,6 +543,7 @@ class EntityModelClosingEntryMixIn:
             )
 
         if closing_entry_model is None or closing_entry_exists:
+            # noinspection PyUnresolvedReferences
             self.closingentrymodel_set.filter(closing_date__exact=closing_date).delete()
         else:
             closing_entry_model.closingentrytransactionmodel_set.all().delete()
@@ -592,7 +594,7 @@ class EntityModelClosingEntryMixIn:
                                          cache_name: str = 'default',
                                          force_cache_update: bool = False,
                                          cache_timeout: Optional[int] = None,
-                                         **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
+                                         **kwargs) -> Optional[List[T]]:
 
         if not force_cache_update:
             cache_system = caches[cache_name]
@@ -618,7 +620,7 @@ class EntityModelClosingEntryMixIn:
                                           cache_name: str = 'default',
                                           force_cache_update: bool = False,
                                           cache_timeout: Optional[int] = None,
-                                          **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
+                                          **kwargs) -> Optional[List[T]]:
 
         _, day = monthrange(year, month)
         closing_date = date(year, month, day)
@@ -635,7 +637,7 @@ class EntityModelClosingEntryMixIn:
                                                 cache_name: str = 'default',
                                                 force_cache_update: bool = False,
                                                 cache_timeout: Optional[int] = None,
-                                                **kwargs) -> Optional[List['ClosingEntryTransactionModel']]:
+                                                **kwargs) -> Optional[List[T]]:
         closing_date: date = getattr(self, 'get_fy_end')(year=fiscal_year)
         return self.get_closing_entry_cache_for_date(
             closing_date=closing_date,
@@ -917,6 +919,7 @@ class EntityModelAbstract(MP_Node,
     # #### LEDGER MANAGEMENT....
     def create_ledger(self, name: str, ledger_xid: Optional[str] = None, posted: bool = False, commit: bool = True):
         if commit:
+            # noinspection PyUnresolvedReferences
             return self.ledgermodel_set.create(name=name, ledger_xid=ledger_xid, posted=posted)
         return LedgerModel(
             entity=self,
@@ -1014,6 +1017,7 @@ class EntityModelAbstract(MP_Node,
 
         # if str, will look up CoA Model by slug...
         if isinstance(coa_model, str):
+            # noinspection PyUnresolvedReferences
             coa_model = self.chartofaccountmodel_set.get(slug=coa_model)
         else:
             self.validate_chart_of_accounts_for_entity(coa_model)
@@ -1158,10 +1162,9 @@ class EntityModelAbstract(MP_Node,
         ChartOfAccountModelQuerySet
         """
 
+        # noinspection PyUnresolvedReferences
         coa_model_qs = self.chartofaccountmodel_set.all()
-        if active:
-            return coa_model_qs.active()
-        return coa_model_qs
+        return coa_model_qs.active() if active else coa_model_qs
 
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
@@ -1320,8 +1323,10 @@ class EntityModelAbstract(MP_Node,
         if not coa_model:
             coa_model = self.default_coa
         elif isinstance(coa_model, UUID):
+            # noinspection PyUnresolvedReferences
             coa_model = self.chartofaccountmodel_set.select_related('entity').get(uuid__exact=coa_model)
         elif isinstance(coa_model, str):
+            # noinspection PyUnresolvedReferences
             coa_model = self.chartofaccountmodel_set.select_related('entity').get(slug__exact=coa_model)
         elif isinstance(coa_model, ChartOfAccountModel):
             self.validate_chart_of_accounts_for_entity(coa_model=coa_model)
@@ -1467,8 +1472,10 @@ class EntityModelAbstract(MP_Node,
         """
         if coa_model:
             if isinstance(coa_model, UUID):
+                # noinspection PyUnresolvedReferences
                 coa_model = self.chartofaccountsmodel_set.get(uuid__exact=coa_model)
             elif isinstance(coa_model, str):
+                # noinspection PyUnresolvedReferences
                 coa_model = self.chartofaccountsmodel_set.get(slug__exact=coa_model)
             elif isinstance(coa_model, ChartOfAccountModel):
                 self.validate_chart_of_accounts_for_entity(
@@ -1512,8 +1519,10 @@ class EntityModelAbstract(MP_Node,
         """
         if coa_model:
             if isinstance(coa_model, UUID):
+                # noinspection PyUnresolvedReferences
                 coa_model = self.chartofaccountsmodel_set.get(uuid__exact=coa_model)
             elif isinstance(coa_model, str):
+                # noinspection PyUnresolvedReferences
                 coa_model = self.chartofaccountsmodel_set.get(slug__exact=coa_model)
             elif isinstance(coa_model, ChartOfAccountModel):
                 self.validate_chart_of_accounts_for_entity(
@@ -1542,6 +1551,7 @@ class EntityModelAbstract(MP_Node,
         return io_context
 
     # ### LEDGER MANAGEMENT ####
+    # noinspection PyUnresolvedReferences
     def get_ledgers(self, posted: Optional[bool] = None):
         if posted is not None:
             return self.ledgermodel_set.filter(posted=posted)
@@ -1578,6 +1588,7 @@ class EntityModelAbstract(MP_Node,
         VendorModelQuerySet
             The EntityModel instance VendorModelQuerySet with applied filters.
         """
+        # noinspection PyUnresolvedReferences
         vendor_qs = self.vendormodel_set.all().select_related('entity_model')
         if active:
             vendor_qs = vendor_qs.active()
@@ -1627,6 +1638,7 @@ class EntityModelAbstract(MP_Node,
         CustomerModelQueryset
             The EntityModel instance CustomerModelQueryset with applied filters.
         """
+        # noinspection PyUnresolvedReferences
         customer_model_qs = self.customermodel_set.all().select_related('entity_model')
         if active:
             customer_model_qs = customer_model_qs.active()
@@ -1774,6 +1786,7 @@ class EntityModelAbstract(MP_Node,
         return bill_model
 
     def get_items_for_bill(self) -> ItemModelQuerySet:
+        # noinspection PyUnresolvedReferences
         item_model_qs: ItemModelQuerySet = self.itemmodel_set.all()
         return item_model_qs.select_related('uom', 'entity').bills()
 
@@ -1891,6 +1904,7 @@ class EntityModelAbstract(MP_Node,
         -------
         PurchaseOrderModelQuerySet
         """
+        # noinspection PyUnresolvedReferences
         return self.purchaseordermodel_set.all().select_related('entity')
 
     def create_purchase_order(self,
@@ -1937,6 +1951,7 @@ class EntityModelAbstract(MP_Node,
         -------
         EstimateModelQuerySet
         """
+        # noinspection PyUnresolvedReferences
         return self.estimatemodel_set.all().select_related('entity')
 
     def create_estimate(self,
@@ -2000,10 +2015,9 @@ class EntityModelAbstract(MP_Node,
         -------
         BankAccountModelQuerySet
         """
+        # noinspection PyUnresolvedReferences
         bank_account_qs = self.bankaccountmodel_set.all().select_related('entity_model')
-        if active:
-            bank_account_qs = bank_account_qs.active()
-        return bank_account_qs
+        return bank_account_qs.active() if active else bank_account_qs
 
     def create_bank_account(self,
                             name: str,
@@ -2107,6 +2121,7 @@ class EntityModelAbstract(MP_Node,
         -------
         UnitOfMeasureModelQuerySet
         """
+        # noinspection PyUnresolvedReferences
         return self.unitofmeasuremodel_set.all().select_related('entity')
 
     def create_uom(self, name: str, unit_abbr: str, active: bool = True, commit: bool = True) -> UnitOfMeasureModel:
@@ -2155,6 +2170,7 @@ class EntityModelAbstract(MP_Node,
         -------
         ItemModelQuerySet
         """
+        # noinspection PyUnresolvedReferences
         qs = self.itemmodel_set.all().select_related(
             'uom',
             'entity',
@@ -2212,6 +2228,7 @@ class EntityModelAbstract(MP_Node,
             The created Product.
         """
         if isinstance(uom_model, UUID):
+            # noinspection PyUnresolvedReferences
             uom_model = self.unitofmeasuremodel_set.select_related('entity').get(uuid__exact=uom_model)
         elif isinstance(uom_model, UnitOfMeasureModel):
             if uom_model.entity_id != self.uuid:
@@ -2288,6 +2305,7 @@ class EntityModelAbstract(MP_Node,
         """
 
         if isinstance(uom_model, UUID):
+            # noinspection PyUnresolvedReferences
             uom_model = self.unitofmeasuremodel_set.select_related('entity').get(uuid__exact=uom_model)
         elif isinstance(uom_model, UnitOfMeasureModel):
             if uom_model.entity_id != self.uuid:
@@ -2368,6 +2386,7 @@ class EntityModelAbstract(MP_Node,
         ItemModel
         """
         if isinstance(uom_model, UUID):
+            # noinspection PyUnresolvedReferences
             uom_model = self.unitofmeasuremodel_set.select_related('entity').get(uuid__exact=uom_model)
         elif isinstance(uom_model, UnitOfMeasureModel):
             if uom_model.entity_id != self.uuid:
@@ -2469,6 +2488,7 @@ class EntityModelAbstract(MP_Node,
         ItemModel
         """
         if isinstance(uom_model, UUID):
+            # noinspection PyUnresolvedReferences
             uom_model = self.unitofmeasuremodel_set.select_related('entity').get(uuid__exact=uom_model)
         elif isinstance(uom_model, UnitOfMeasureModel):
             if uom_model.entity_id != self.uuid:
@@ -2664,6 +2684,7 @@ class EntityModelAbstract(MP_Node,
 
         """
         if not item_qs:
+            # noinspection PyUnresolvedReferences
             recorded_qs = self.itemmodel_set.all().inventory_all()
         else:
             self.validate_item_qs(item_qs)
@@ -2741,6 +2762,7 @@ class EntityModelAbstract(MP_Node,
         })
 
         if not ledger_model:
+            # noinspection PyUnresolvedReferences
             ledger_model = self.ledgermodel_set.create(
                 name=f'Capital Deposit on {je_timestamp.isoformat()}.',
                 posted=ledger_posted
@@ -2766,6 +2788,7 @@ class EntityModelAbstract(MP_Node,
         return self.last_closing_date is not None
 
     def get_closing_entries(self):
+        # noinspection PyUnresolvedReferences
         return self.closingentrymodel_set.all()
 
     def get_closing_entry_dates_list_meta(self, as_iso: bool = True) -> List[Union[date, str]]:
@@ -2775,6 +2798,7 @@ class EntityModelAbstract(MP_Node,
         return [date.fromisoformat(d) for d in date_list]
 
     def compute_closing_entry_dates_list(self, as_iso: bool = True) -> List[Union[date, str]]:
+        # noinspection PyUnresolvedReferences
         closing_entry_qs = self.closingentrymodel_set.order_by('-closing_date').only('closing_date').posted()
         if as_iso:
             return [ce.closing_date.isoformat() for ce in closing_entry_qs]
@@ -2869,6 +2893,7 @@ class EntityModelAbstract(MP_Node,
             closing_entry_exists = True
         else:
             try:
+                # noinspection PyUnresolvedReferences
                 closing_entry_model = self.closingentrymodel_set.select_related(
                     'ledger_model',
                     'ledger_model__entity'

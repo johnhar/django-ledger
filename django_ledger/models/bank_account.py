@@ -6,7 +6,7 @@ A Bank Account refers to the financial institution which holds financial assets 
 A bank account usually holds cash, which is a Current Asset. Transactions may be imported using the open financial
 format specification OFX into a staging area for final disposition into the EntityModel ledger.
 """
-from typing import Optional
+from typing import Optional, TypeVar, Generic
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
@@ -26,12 +26,32 @@ class BankAccountValidationError(ValidationError):
     pass
 
 
-class BankAccountModelQuerySet(QuerySet):
+T = TypeVar('T', bound='BankAccountModel')
+QS = TypeVar('QS', bound='BankAccountQuerySet')
+
+
+class BankAccountModelQuerySet(QuerySet[T], Generic[T]):
     """
     A custom defined QuerySet for the BankAccountModel.
     """
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
 
-    def active(self) -> QuerySet:
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
+
+    def active(self):
         """
         Active bank accounts which can be used to create new transactions.
 

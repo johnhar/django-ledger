@@ -49,7 +49,7 @@ Roles serve several purposes:
 """
 from itertools import groupby
 from random import randint
-from typing import Union, List, Optional
+from typing import Union, List, Optional, TypeVar, Generic
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
@@ -81,11 +81,29 @@ CREDIT = 'credit'
 class AccountModelValidationError(ValidationError):
     pass
 
+T = TypeVar('T', bound='AccountModel')
+QS = TypeVar('QS', bound='AccountModelQuerySet')
 
-class AccountModelQuerySet(MP_NodeQuerySet):
+class AccountModelQuerySet(MP_NodeQuerySet[T], Generic[T]):
     """
     Custom QuerySet for AccountModel inheriting from MP_NodeQuerySet.
     """
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
+
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
 
     def active(self):
         """
@@ -805,8 +823,6 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
             If True, commit the changes to the database by calling the save method.
         raise_exception : bool, optional
             If True, raises an AccountModelValidationError if the account cannot be activated.
-        kwargs : dict
-            Additional parameters that can be passed for further customization.
         """
         if not self.can_activate():
             if raise_exception:
@@ -832,8 +848,6 @@ class AccountModelAbstract(MP_Node, CreateUpdateMixIn):
             If True, commit the changes to the database by calling the save method.
         raise_exception : bool, optional
             If True, raises an AccountModelValidationError if the account cannot be activated.
-        kwargs : dict
-            Additional parameters that can be passed for further customization.
         """
         if not self.can_deactivate():
             if raise_exception:

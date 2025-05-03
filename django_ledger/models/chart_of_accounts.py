@@ -42,7 +42,7 @@ accurate record-keeping and reporting.
 
 from random import choices
 from string import ascii_lowercase, digits
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, TypeVar, Generic
 from uuid import uuid4
 
 from django.apps import apps
@@ -72,8 +72,26 @@ app_config = apps.get_app_config('django_ledger')
 class ChartOfAccountsModelValidationError(ValidationError):
     pass
 
+T = TypeVar('T', bound='ChartOfAccountModel')
+QS = TypeVar('QS', bound='ChartOfAccountModelQuerySet')
 
-class ChartOfAccountModelQuerySet(QuerySet):
+class ChartOfAccountModelQuerySet(QuerySet[T], Generic[T]):
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
+
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
 
     def active(self):
         """
@@ -214,6 +232,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
         Returns:
             AccountModelQuerySet: A queryset containing the root accounts in the chart of accounts.
         """
+        # noinspection PyUnresolvedReferences
         return self.accountmodel_set.all().is_coa_root()
 
     def get_coa_root_node(self) -> AccountModel:
@@ -297,6 +316,7 @@ class ChartOfAccountModelAbstract(SlugNameMixIn, CreateUpdateMixIn):
         AccountModelQuerySet
             A query set of non-root accounts in the chart of accounts.
         """
+        # noinspection PyUnresolvedReferences
         return self.accountmodel_set.all().not_coa_root()
 
     def get_coa_accounts(self, active_only: bool = True) -> AccountModelQuerySet:

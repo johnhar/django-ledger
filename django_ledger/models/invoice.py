@@ -538,6 +538,7 @@ class InvoiceModelAbstract(
         """
 
         if not batch:
+            # noinspection PyUnresolvedReferences
             batch = self.itemtransactionmodel_set.all().select_related(
                 'item_model',
                 'entity_unit',
@@ -593,6 +594,7 @@ class InvoiceModelAbstract(
             Optional pre-fetched ItemModelTransactionQueryset to use. Avoids additional DB query if provided.
         """
         if not queryset:
+            # noinspection PyUnresolvedReferences
             queryset = self.itemtransactionmodel_set.all()
         else:
             self.validate_itemtxs_batch(queryset)
@@ -1113,6 +1115,7 @@ class InvoiceModelAbstract(
         self.date_in_review = get_localdate() if not date_in_review else date_in_review
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         if not itemtxs_qs.count():
             raise InvoiceModelValidationError(message='Cannot review an Invoice without items...')

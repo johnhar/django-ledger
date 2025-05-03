@@ -29,7 +29,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from itertools import chain
-from typing import Set, Union, Optional, Dict, Tuple, List
+from typing import Set, Union, Optional, Dict, Tuple, List, TypeVar, Generic
 from uuid import uuid4, UUID
 
 from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationError
@@ -71,8 +71,10 @@ from django_ledger.settings import (
 class JournalEntryValidationError(ValidationError):
     pass
 
+T = TypeVar('T', bound='JournalEntry')
+QS = TypeVar('QS', bound='JournalEntryQuerySet')
 
-class JournalEntryModelQuerySet(QuerySet):
+class JournalEntryModelQuerySet(QuerySet[T], Generic[T]):
     """
     A custom QuerySet for working with Journal Entry models, providing additional
     convenience methods and validations for specific use cases.
@@ -82,7 +84,7 @@ class JournalEntryModelQuerySet(QuerySet):
     locked entries, and querying entries associated with specific ledgers.
     """
 
-    def create(self, verify_on_save: bool = False, force_create: bool = False, **kwargs):
+    def create(self: QS, verify_on_save: bool = False, force_create: bool = False, **kwargs) -> T:
         """
         Creates a new Journal Entry while enforcing business logic validations.
 
@@ -123,6 +125,23 @@ class JournalEntryModelQuerySet(QuerySet):
         # Save the object with optional pre-save verification.
         obj.save(force_insert=True, using=self.db, verify=verify_on_save)
         return obj
+
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
+
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
 
     def posted(self):
         """
@@ -199,7 +218,7 @@ class JournalEntryModelManager(Manager):
     annotations for convenience in query results.
     """
 
-    def get_queryset(self) -> JournalEntryModelQuerySet:
+    def get_queryset(self):
         """
         Returns the default queryset for JournalEntryModel with additional
         annotations applied.
@@ -223,7 +242,7 @@ class JournalEntryModelManager(Manager):
             txs_count=Count('transactionmodel')  # Annotates the count of transactions
         )
 
-    def for_user(self, user_model) -> JournalEntryModelQuerySet:
+    def for_user(self, user_model):
         """
         Filters the JournalEntryModel queryset for the given user.
 
@@ -250,7 +269,7 @@ class JournalEntryModelManager(Manager):
             Q(ledger__entity__managers__in=[user_model])  # Entries for entities where the user is a manager
         )
 
-    def for_entity(self, entity_slug: Union[str, EntityModel], user_model) -> JournalEntryModelQuerySet:
+    def for_entity(self, entity_slug: Union[str, EntityModel], user_model):
         """
         Filters the JournalEntryModel queryset for a specific entity and user.
 
@@ -978,9 +997,9 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             A queryset containing transactions related to this journal entry. If `select_accounts` is
             True, the accounts are included in the query as well.
         """
-        if select_accounts:
-            return self.transactionmodel_set.all().select_related('account')
-        return self.transactionmodel_set.all()
+        # noinspection PyUnresolvedReferences
+        qs = self.transactionmodel_set.all()
+        return qs.select_related('account') if select_accounts else qs
 
     def get_txs_balances(
             self,
