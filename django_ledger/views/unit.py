@@ -25,6 +25,7 @@ from django_ledger.views.mixins import (DjangoLedgerSecurityMixIn, QuarterlyRepo
 class EntityUnitModelModelBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = EntityUnitModel.objects.for_entity(

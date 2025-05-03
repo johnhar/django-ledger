@@ -50,6 +50,7 @@ class IODigestContextManager:
                     fmt = self.get_strftime_format()
                 return from_date.strftime(fmt)
             return from_date
+        return None
 
     @property
     def to_datetime(self):
@@ -120,6 +121,7 @@ class IODigestContextManager:
                 raise IODigestValidationError(
                     'IO Digest does not have balance sheet information available.'
                 )
+            return {}
 
     # Income Statement Data...
     def has_income_statement(self) -> bool:
@@ -133,6 +135,7 @@ class IODigestContextManager:
                 raise IODigestValidationError(
                     'IO Digest does not have income statement information available.'
                 )
+            return {}
 
     # Cash Flow Statement Data...
     def has_cash_flow_statement(self):
@@ -146,6 +149,7 @@ class IODigestContextManager:
                 raise IODigestValidationError(
                     'IO Digest does not have cash flow statement information available.'
                 )
+            return {}
 
     # All Available Statements
     def get_financial_statements_data(self) -> Dict:

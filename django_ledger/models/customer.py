@@ -5,7 +5,7 @@ Copyright© EDMA Group Inc licensed under the GPLv3 Agreement.
 A Customer refers to the person or entity that buys product and services. When issuing Invoices, a Customer must be
 created before it can be assigned to the InvoiceModel. Only customers who are active can be assigned to new Invoices.
 """
-
+from typing import Union
 from uuid import uuid4
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -219,7 +219,8 @@ class CustomerModelAbstract(ContactInfoMixIn, TaxCollectionMixIn, CreateUpdateMi
             not self.customer_number
         ])
 
-    def _get_next_state_model(self, raise_exception: bool = True):
+    # noinspection PyUnresolvedReferences
+    def _get_next_state_model(self, raise_exception: bool = True) -> Union['EntityStateModel', None]:
         """
         Fetches the updated EntityStateModel associated with the customer number sequence.
         If EntityStateModel is not present, a new model will be created.
@@ -234,15 +235,15 @@ class CustomerModelAbstract(ContactInfoMixIn, TaxCollectionMixIn, CreateUpdateMi
         EntityStateModel
             The EntityStateModel associated with the CustomerModel number sequence.
         """
-        EntityStateModel = lazy_loader.get_entity_state_model()
+        _EntityStateModel = lazy_loader.get_entity_state_model()
 
         try:
             LOOKUP = {
                 'entity_model_id__exact': self.entity_model_id,
-                'key__exact': EntityStateModel.KEY_CUSTOMER
+                'key__exact': _EntityStateModel.KEY_CUSTOMER
             }
 
-            state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_for_update()
+            state_model_qs = _EntityStateModel.objects.filter(**LOOKUP).select_for_update()
             state_model = state_model_qs.get()
             state_model.sequence = F('sequence') + 1
             state_model.save()
@@ -255,16 +256,17 @@ class CustomerModelAbstract(ContactInfoMixIn, TaxCollectionMixIn, CreateUpdateMi
                 'entity_model_id': self.entity_model_id,
                 'entity_unit_id': None,
                 'fiscal_year': None,
-                'key': EntityStateModel.KEY_CUSTOMER,
+                'key': _EntityStateModel.KEY_CUSTOMER,
                 'sequence': 1
             }
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
                 LOOKUP['fund_id'] = None
-            state_model = EntityStateModel.objects.create(**LOOKUP)
+            state_model = _EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_customer_number(self, commit: bool = False) -> str:
         """

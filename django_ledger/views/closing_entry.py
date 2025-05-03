@@ -76,6 +76,10 @@ class ClosingEntryModelCreateView(ClosingEntryModelBaseView, CreateView):
         'header_subtitle_icon': 'file-icons:finaldraft'
     }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ce_model = None
+
     def get_initial(self):
         return {
             'closing_date': get_localdate()

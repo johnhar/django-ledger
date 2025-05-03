@@ -18,7 +18,9 @@ class EntityUnitNode(DjangoObjectType):
 class EntityUnitQuery(graphene.ObjectType):
     all_entity_unit = DjangoFilterConnectionField(EntityUnitNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_vendors(self, info, slug_name, **kwargs):
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def resolve_all_vendors(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return EntityUnitModel.objects.for_entity(
                 entity_slug=slug_name,

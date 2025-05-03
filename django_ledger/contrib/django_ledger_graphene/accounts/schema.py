@@ -22,7 +22,9 @@ class AccountNode(DjangoObjectType):
 class Accountlist_Query(graphene.ObjectType):
     all_accounts = DjangoFilterConnectionField(AccountNode, slug_name=graphene.String(required=True))
 
-    def resolve_all_accounts(self, info, slug_name, **kwargs):
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def resolve_all_accounts(info, slug_name, **kwargs):
         if info.context.user.is_authenticated:
             return AccountModel.objects.for_entity(
             entity_model=slug_name,

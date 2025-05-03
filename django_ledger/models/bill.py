@@ -8,11 +8,11 @@ In addition to tracking the bill amount, it tracks the paid and due amount.
 
 Examples
 ________
->>> user_model = request.user  # django UserModel
->>> entity_slug = kwargs['entity_slug'] # may come from view kwargs
->>> bill_model = BillModel()
->>> ledger_model, bill_model = bill_model.configure(entity_slug=entity_slug, user_model=user_model)
->>> bill_model.save()
+    user_model = request.user  # django UserModel
+    entity_slug = kwargs['entity_slug'] # may come from view kwargs
+    bill_model = BillModel()
+    ledger_model, bill_model = bill_model.configure(entity_slug=entity_slug, user_model=user_model)
+    bill_model.save()
 """
 
 from datetime import date, datetime
@@ -31,7 +31,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_ACC_PAYABLE
 from django_ledger.io.io_core import get_localtime, get_localdate
-from django_ledger.models.entity import EntityModel
+from django_ledger.models.entity import EntityModel, EntityStateModel
 from django_ledger.models.items import ItemTransactionModelQuerySet, ItemTransactionModel, ItemModel, ItemModelQuerySet
 from django_ledger.models.mixins import (
     CreateUpdateMixIn,
@@ -206,8 +206,8 @@ class BillModelManager(Manager):
 
         Examples
         ________
-            >>> request_user = request.user
-            >>> bill_model_qs = BillModel.objects.for_user(user_model=request_user)
+                request_user = request.user
+                bill_model_qs = BillModel.objects.for_user(user_model=request_user)
 
         Returns
         _______
@@ -228,32 +228,32 @@ class BillModelManager(Manager):
         May pass an instance of EntityModel or a String representing the EntityModel slug.
 
         Parameters
-        __________
+        ----------
         entity_slug: str or EntityModel
             The entity slug or EntityModel used for filtering the QuerySet.
         user_model
             Logged in and authenticated django UserModel instance.
 
         Examples
-        ________
-            >>> request_user = request.user
-            >>> slug = kwargs['entity_slug'] # may come from request kwargs
-            >>> bill_model_qs = BillModel.objects.for_entity(user_model=request_user, entity_slug=slug)
+        --------
+            request_user = request.user
+            slug = kwargs['entity_slug'] # may come from request kwargs
+            bill_model_qs = BillModel.objects.for_entity(user_model=request_user, entity_slug=slug)
 
         Returns
-        _______
+        -------
         BillModelQuerySet
             Returns a BillModelQuerySet with applied filters.
         """
         qs = self.for_user(user_model)
         if isinstance(entity_slug, EntityModel):
-            return qs.filter(
-                Q(ledger__entity=entity_slug)
-            )
+            qs = qs.filter(Q(ledger__entity=entity_slug))
         elif isinstance(entity_slug, str):
-            return qs.filter(
-                Q(ledger__entity__slug__exact=entity_slug)
-            )
+            qs = qs.filter(Q(ledger__entity__slug=entity_slug))
+        else:
+            raise TypeError('entity_slug must be a string or EntityModel')
+        # noinspection PyTypeChecker
+        return qs
 
 
 class BillModelAbstract(
@@ -510,9 +510,10 @@ class BillModelAbstract(
     def can_migrate_itemtxs(self) -> bool:
         return self.is_draft()
 
-    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False):
+    def migrate_itemtxs(self, itemtxs: Dict, operation: str, commit: bool = False) -> Union[
+        List[ItemTransactionModel], ItemTransactionModelQuerySet]:
         itemtxs_batch = super().migrate_itemtxs(itemtxs=itemtxs, commit=commit, operation=operation)
-        self.update_amount_due(itemtxs_qs=itemtxs_batch)
+        self.update_amount_due(batch=itemtxs_batch)
         self.get_state(commit=True)
 
         if commit:
@@ -528,23 +529,24 @@ class BillModelAbstract(
             entity_id__exact=self.ledger.entity_id
         ).bills()
 
-    def validate_itemtxs_qs(self, queryset: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
+    # noinspection PyMethodOverriding
+    def validate_itemtxs_batch(self, batch: Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]):
         """
         Validates that the entire ItemTransactionModelQuerySet is bound to the BillModel.
 
         Parameters
         ----------
-        queryset: ItemTransactionModelQuerySet or list of ItemTransactionModel.
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel.
             ItemTransactionModelQuerySet to validate.
         """
         valid = all([
-            i.bill_model_id == self.uuid for i in queryset
+            i.bill_model_id == self.uuid for i in batch
         ])
         if not valid:
             raise BillModelValidationError(f'Invalid queryset. All items must be assigned to Bill {self.uuid}')
 
     def get_itemtxs_data(self,
-                         queryset: Optional[ItemTransactionModelQuerySet] = None,
+                         batch: Optional[Union[List[ItemTransactionModel], ItemTransactionModelQuerySet]] = None,
                          aggregate_on_db: bool = False,
                          lazy_agg: bool = False) -> Tuple[ItemTransactionModelQuerySet, Dict]:
         """
@@ -552,39 +554,51 @@ class BillModelAbstract(
 
         Parameters
         ----------
-        queryset:
+        batch:
             Optional pre-fetched ItemModelQueryset to use. Avoids additional DB query if provided.
         aggregate_on_db: bool
             If True, performs aggregation of ItemsTransactions in the DB resulting in one additional DB query.
+        lazy_agg: bool
+            If True, returns a dict of the items and the result of the aggregation, else return None.
+
         Returns
         -------
         A tuple: ItemTransactionModelQuerySet, dict
         """
-        if not queryset:
+        if not batch:
             if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                queryset = self.itemtransactionmodel_set.all().select_related(
+                # noinspection PyUnresolvedReferences
+                batch = self.itemtransactionmodel_set.all().select_related(
                     'item_model',
                     'entity_unit',
                     'po_model',
                     'bill_model')
             else:
-                queryset = self.itemtransactionmodel_set.all().select_related(
+                # noinspection PyUnresolvedReferences
+                batch = self.itemtransactionmodel_set.all().select_related(
                     'item_model',
                     'entity_unit',
                     'fund',
                     'po_model',
                     'bill_model')
+        if not batch:
+            # noinspection PyUnresolvedReferences
+            batch = self.itemtransactionmodel_set.all().select_related(
+                'item_model',
+                'entity_unit',
+                'po_model',
+                'bill_model')
         else:
-            self.validate_itemtxs_qs(queryset)
+            self.validate_itemtxs_batch(batch)
 
-        if aggregate_on_db and isinstance(queryset, ItemTransactionModelQuerySet):
-            return queryset, queryset.aggregate(
+        if aggregate_on_db and isinstance(batch, ItemTransactionModelQuerySet):
+            return batch, batch.aggregate(
                 total_amount__sum=Sum('total_amount'),
                 total_items=Count('uuid')
             )
-        return queryset, {
-            'total_amount__sum': sum(i.total_amount for i in queryset),
-            'total_items': len(queryset)
+        return batch, {
+            'total_amount__sum': sum(i.total_amount for i in batch),
+            'total_items': len(batch)
         } if not lazy_agg else None
 
     # ### ItemizeMixIn implementation END...
@@ -623,9 +637,10 @@ class BillModelAbstract(
         """
 
         if not queryset:
+            # noinspection PyUnresolvedReferences
             queryset = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset)
+            self.validate_itemtxs_batch(queryset)
 
         return queryset.order_by('item_model__expense_account__uuid',
                                  'entity_unit__uuid',
@@ -643,14 +658,14 @@ class BillModelAbstract(
             account_unit_fund_total=Sum('total_amount')
         )
 
-    def update_amount_due(self, itemtxs_qs: Optional[
+    def update_amount_due(self, batch: Optional[
         Union[ItemTransactionModelQuerySet, List[ItemTransactionModel]]] = None) -> ItemTransactionModelQuerySet:
         """
         Updates the BillModel amount due.
 
         Parameters
         ----------
-        itemtxs_qs: ItemTransactionModelQuerySet or list of ItemTransactionModel
+        batch: ItemTransactionModelQuerySet or list of ItemTransactionModel
             Optional pre-fetched ItemTransactionModelQuerySet. Avoids additional DB if provided.
             Queryset is validated if provided.
 
@@ -659,9 +674,9 @@ class BillModelAbstract(
         ItemTransactionModelQuerySet
             Newly fetched of previously fetched ItemTransactionModelQuerySet if provided.
         """
-        itemtxs_qs, itemtxs_agg = self.get_itemtxs_data(queryset=itemtxs_qs)
+        batch, itemtxs_agg = self.get_itemtxs_data(batch=batch)
         self.amount_due = round(itemtxs_agg['total_amount__sum'], 2)
-        return itemtxs_qs
+        return batch
 
     def is_draft(self) -> bool:
         """
@@ -1179,9 +1194,10 @@ class BillModelAbstract(
                 )
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset=itemtxs_qs)
+            self.validate_itemtxs_batch(batch=itemtxs_qs)
 
         if not itemtxs_qs.count():
             raise BillModelValidationError(message=f'Cannot review a {self.__class__.__name__} without items...')
@@ -1423,12 +1439,14 @@ class BillModelAbstract(
         self.clean()
 
         if not itemtxs_qs:
+            # noinspection PyUnresolvedReferences
             itemtxs_qs = self.itemtransactionmodel_set.all()
         else:
-            self.validate_itemtxs_qs(queryset=itemtxs_qs)
+            self.validate_itemtxs_batch(batch=itemtxs_qs)
 
         if commit:
             self.save()
+            # noinspection PyShadowingNames
             ItemTransactionModel = lazy_loader.get_item_transaction_model()
             itemtxs_qs.filter(
                 po_model_id__isnull=False
@@ -1544,7 +1562,6 @@ class BillModelAbstract(
                 entity_slug=entity_slug,
                 user_model=user_model,
                 void=True,
-                void_date=self.date_void,
                 raise_exception=False,
                 force_migrate=True)
             self.save()
@@ -1674,7 +1691,7 @@ class BillModelAbstract(
     def delete(self, force_db_delete: bool = False, using=None, keep_parents=False):
         if not force_db_delete:
             self.mark_as_canceled(commit=True)
-            return
+            return None
         if not self.can_delete():
             raise BillModelValidationError(
                 message=_(f'Bill {self.bill_number} cannot be deleted...')
@@ -1811,7 +1828,7 @@ class BillModelAbstract(
         """
         return self.date_approved
 
-    def _get_next_state_model(self, raise_exception: bool = True):
+    def _get_next_state_model(self, raise_exception: bool = True) -> Union[EntityStateModel | None]:
         """
         Fetches the next sequenced state model associated with the BillModel number.
 
@@ -1823,11 +1840,11 @@ class BillModelAbstract(
         Returns
         -------
         EntityStateModel
-            An instance of EntityStateModel
+            An instance of EntityStateModel, if no exception is raised.
         """
-        EntityStateModel = lazy_loader.get_entity_state_model()
-        EntityModel = lazy_loader.get_entity_model()
-        entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
+        _EntityStateModel: EntityStateModel = lazy_loader.get_entity_state_model()
+        _EntityModel: EntityModel = lazy_loader.get_entity_model()
+        entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
         fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
 
         try:
@@ -1835,12 +1852,12 @@ class BillModelAbstract(
                 'entity_model_id__exact': self.ledger.entity_id,
                 'entity_unit_id__exact': None,
                 'fiscal_year': fy_key,
-                'key__exact': EntityStateModel.KEY_BILL
+                'key__exact': _EntityStateModel.KEY_BILL
             }
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
                 LOOKUP['fund_id__exact'] = None
 
-            state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
+            state_model_qs = _EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
             state_model = state_model_qs.get()
             state_model.sequence = F('sequence') + 1
@@ -1848,24 +1865,25 @@ class BillModelAbstract(
             state_model.refresh_from_db()
             return state_model
         except ObjectDoesNotExist:
-            EntityModel = lazy_loader.get_entity_model()
-            entity_model = EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
+            _EntityModel: EntityModel = lazy_loader.get_entity_model()
+            entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
             fy_key = entity_model.get_fy_for_date(dt=self.date_draft)
 
             LOOKUP = {
                 'entity_model_id': entity_model.uuid,
                 'entity_unit_id': None,
                 'fiscal_year': fy_key,
-                'key': EntityStateModel.KEY_BILL,
+                'key': _EntityStateModel.KEY_BILL,
                 'sequence': 1
             }
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
                 LOOKUP['fund_id'] = None
-            state_model = EntityStateModel.objects.create(**LOOKUP)
+            state_model = _EntityStateModel.objects.create(**LOOKUP)
             return state_model
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_bill_number(self, commit: bool = False) -> str:
         """
@@ -1939,6 +1957,7 @@ class BillModel(BillModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def billmodel_presave(instance: BillModel, **kwargs):
     if instance.can_generate_bill_number():
         instance.generate_bill_number(commit=False)

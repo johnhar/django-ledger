@@ -5,14 +5,15 @@ Copyright© EDMA Group Inc licensed under the GPLv3 Agreement.
 Contributions to this module:
 Miguel Sanda <msanda@arrobalytics.com>
 """
-from django.forms import (ModelForm, TextInput, BooleanField, ValidationError, IntegerField,
-                          EmailInput, URLInput, CheckboxInput, Select, Form)
+
+from django.forms import (ModelForm, TextInput, BooleanField, ValidationError, EmailInput, URLInput, CheckboxInput,
+                          Select)
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.forms.utils import validate_cszc
 from django_ledger.models.entity import EntityModel
 from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
-from django.core.validators import MinValueValidator, MaxValueValidator
+
 
 class EntityModelCreateForm(ModelForm):
     if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
@@ -55,7 +56,6 @@ class EntityModelCreateForm(ModelForm):
 
         validate_cszc(self.cleaned_data)
 
-
     class Meta:
         model = EntityModel
         fields = [
@@ -71,7 +71,7 @@ class EntityModelCreateForm(ModelForm):
             'phone',
             'fy_start_month',
             'activate_all_accounts',
-            'accrual_method',
+            'accrual_method'
         ]
         if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
             # insert fund-specific fields between 'fy_start_month' and 'activate_all_accounts'
@@ -124,7 +124,7 @@ class EntityModelCreateForm(ModelForm):
             }),
             'website': URLInput(attrs={
                 'class': DJANGO_LEDGER_FORM_INPUT_CLASSES,
-                'placeholder': _('http://www.mywebsite.com...')
+                'placeholder': _('https://www.mywebsite.com...')
             }),
             'default_coa': CheckboxInput(attrs={
                 'class': 'checkbox'

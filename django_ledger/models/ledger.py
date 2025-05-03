@@ -267,6 +267,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         except AttributeError:
             if force_evaluation:
                 try:
+                    # noinspection PyUnresolvedReferences
                     earliest_je = self.journal_entries.posted().order_by('-timestamp').only('timestamp').first()
                     self.earliest_timestamp = earliest_je.timestamp if earliest_je else None
                 except ObjectDoesNotExist:
@@ -315,11 +316,13 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         for model_class, attr in self.get_wrapper_info.items():
             if getattr(self, attr, None):
                 return getattr(self, attr)
+        return None # is this the expected return value in the error case of not finding the instance?
 
     def get_wrapped_model_url(self):
         if self.has_wrapped_model():
             wrapped_model = self.get_wrapped_model_instance()
             return wrapped_model.get_absolute_url()
+        return None # is this the expected return value in the error case of not finding the url?
 
     def is_posted(self) -> bool:
         """
@@ -472,7 +475,8 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   commited=commit,
                                   **kwargs)
 
-    def post_journal_entries(self, commit: bool = True, **kwargs):
+    def post_journal_entries(self, commit: bool = True):
+        # noinspection PyUnresolvedReferences
         je_model_qs = self.journal_entries.unposted()
         for je_model in je_model_qs:
             je_model.mark_as_posted(raise_exception=False, commit=False)
@@ -537,7 +541,8 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   commited=commit,
                                   **kwargs)
 
-    def lock_journal_entries(self, commit: bool = True, **kwargs):
+    def lock_journal_entries(self, commit: bool = True):
+        # noinspection PyUnresolvedReferences
         je_model_qs = self.journal_entries.unlocked()
         for je_model in je_model_qs:
             je_model.mark_as_locked(raise_exception=False, commit=False)
@@ -553,6 +558,9 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         ----------
         commit: bool
             If True, saves the LedgerModel instance instantly. Defaults to False.
+        raise_exception: bool
+            If True, raises LedgerModelValidationError if un-locking not allowed.
+            Otherwise, just return.  Default is True.
         """
         if not self.can_unlock():
             if raise_exception:
@@ -617,6 +625,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
 
         # checks if ledger model has journal entries in a closed period...
         if self.entity.has_closing_entry():
+            # noinspection PyUnresolvedReferences
             earliest_je_timestamp = self.journal_entries.posted().order_by('-timestamp').values('timestamp').first()
             if earliest_je_timestamp is not None:
                 earliest_date = earliest_je_timestamp['timestamp'].date()
@@ -770,6 +779,7 @@ class LedgerModel(LedgerModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def ledgermodel_presave(instance: LedgerModel, **kwargs):
     if not instance.has_wrapped_model_info():
         wrapper_instance = instance.get_wrapped_model_instance()

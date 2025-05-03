@@ -18,7 +18,8 @@ class AccountModelInLineForm(ModelForm):
 class AccountModelInLineFormSet(BaseInlineFormSet):
 
     def save_new(self, form, commit=True):
-        setattr(form.instance, self.fk.name, self.instance)
+        # noinspection PyUnresolvedReferences
+        setattr(form.instance, self.fk.name, self.instance) # self.fk.name is in the parent class
         if commit:
             account_model = AccountModel.add_root(
                 instance=super().save_new(form, commit=False)
@@ -89,6 +90,7 @@ class ChartOfAccountsInLine(TabularInline):
     ]
 
 
+# noinspection PyUnresolvedReferences
 class ChartOfAccountsModelAdmin(ModelAdmin):
     list_filter = [
         'entity__name',
@@ -117,7 +119,8 @@ class ChartOfAccountsModelAdmin(ModelAdmin):
     class Meta:
         model = ChartOfAccountModel
 
-    def entity_name(self, obj):
+    @staticmethod
+    def entity_name(obj):
         return obj.entity.name
 
     def get_queryset(self, request):

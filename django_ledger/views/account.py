@@ -30,12 +30,14 @@ class BaseAccountModelBaseView(DjangoLedgerSecurityMixIn):
         qs = super().get_authorized_entity_queryset()
         return qs.select_related('admin', 'default_coa', 'default_coa__entity')
 
+    # noinspection PyUnresolvedReferences
     def get_coa_model(self):
         if not self.coa_model:
             entity_model: EntityModel = self.get_authorized_entity_instance()
             self.coa_model = entity_model.chartofaccountmodel_set.get(slug__exact=self.kwargs['coa_slug'])
         return self.coa_model
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             entity_model: EntityModel = self.get_authorized_entity_instance()
@@ -114,8 +116,8 @@ class AccountModelCreateView(BaseAccountModelBaseView, CreateView):
             'coa_model': self.get_coa_model(),
         }
 
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         coa_model = self.get_coa_model()
         context['coa_model'] = coa_model
         context['header_subtitle'] = f'CoA: {coa_model.name}'

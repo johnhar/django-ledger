@@ -110,16 +110,16 @@ class VendorModelManager(models.Manager):
         user_model
             Logged in and authenticated django UserModel instance.
 
-        Examples
-        ________
-            >>> request_user = request.user
-            >>> slug = kwargs['entity_slug'] # may come from request kwargs
-            >>> vendor_model_qs = VendorModel.objects.for_entity(user_model=request_user, entity_slug=slug)
-
         Returns
         -------
         VendorModelQuerySet
             A filtered VendorModel QuerySet.
+
+        Examples
+        --------
+        request_user = request.user
+        slug = kwargs['entity_slug'] # may come from request kwargs
+        vendor_model_qs = VendorModel.objects.for_entity(user_model=request_user, entity_slug=slug)
         """
         qs = self.for_user(user_model)
         if isinstance(entity_slug, lazy_loader.get_entity_model()):
@@ -270,6 +270,7 @@ class VendorModelAbstract(ContactInfoMixIn,
         except IntegrityError as e:
             if raise_exception:
                 raise e
+            return None
 
     def generate_vendor_number(self, commit: bool = False) -> str:
         """

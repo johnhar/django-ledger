@@ -107,6 +107,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
 
     def migrate(self):
 
+        # noinspection PyUnresolvedReferences
         ce_txs = self.closingentrytransactionmodel_set.all().select_related(
             'account_model',
             'unit_model',
@@ -207,7 +208,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
     def can_post(self) -> bool:
         return not self.is_posted()
 
-    def mark_as_posted(self, commit: bool = False, update_entity_meta: bool = True, **kwargs):
+    def mark_as_posted(self, commit: bool = False, update_entity_meta: bool = True):
         if not self.can_post():
             raise ClosingEntryValidationError(
                 message=_(f'Closing Entry {self.closing_date} is already posted.')
@@ -244,7 +245,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
     def can_unpost(self) -> bool:
         return self.is_posted()
 
-    def mark_as_unposted(self, commit: bool = False, update_entity_meta: bool = True, **kwargs):
+    def mark_as_unposted(self, commit: bool = False, update_entity_meta: bool = True):
         if not self.can_unpost():
             raise ClosingEntryValidationError(
                 message=_(f'Closing Entry {self.closing_date} is not posted.')
@@ -288,7 +289,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
     def can_update_txs(self) -> bool:
         return not self.is_posted()
 
-    def update_transactions(self, force_update: bool = False, post_closing_entry: bool = True, **kwargs):
+    def update_transactions(self, force_update: bool = False, post_closing_entry: bool = True):
         if not self.can_update_txs():
             raise ClosingEntryValidationError(
                 message=_('Cannot update transactions of a posted Closing Entry.')
@@ -505,13 +506,11 @@ class ClosingEntryTransactionModelAbstract(CreateUpdateMixIn):
     def __str__(self):
         return f'{self.__class__.__name__}: {self.closing_entry_model.closing_date.strftime("%D")} | {self.balance}'
 
-    def is_debit(self) -> Optional[bool]:
-        if self.tx_type is not None:
-            return self.tx_type == TransactionModel.DEBIT
+    def is_debit(self) -> bool:
+        return self.tx_type == TransactionModel.DEBIT if self.tx_type is not None else False
 
-    def is_credit(self) -> Optional[bool]:
-        if self.tx_type is not None:
-            return self.tx_type == TransactionModel.CREDIT
+    def is_credit(self) -> bool:
+        return self.tx_type == TransactionModel.CREDIT if self.tx_type is not None else False
 
     def adjust_tx_type_for_negative_balance(self):
         if self.balance < Decimal('0.00'):
@@ -537,6 +536,7 @@ class ClosingEntryTransactionModel(ClosingEntryTransactionModelAbstract):
         abstract = False
 
 
+# noinspection PyUnusedLocal
 def closingentrymodel_presave(instance: ClosingEntryModel, **kwargs):
     instance.create_entry_ledger(commit=False)
 
@@ -544,6 +544,7 @@ def closingentrymodel_presave(instance: ClosingEntryModel, **kwargs):
 pre_save.connect(closingentrymodel_presave, sender=ClosingEntryModel)
 
 
+# noinspection PyUnusedLocal
 def closingentrytransactionmodel_presave(instance: ClosingEntryTransactionModel, **kwargs):
     instance.adjust_tx_type_for_negative_balance()
 

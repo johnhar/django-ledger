@@ -33,7 +33,9 @@ class OFXFileManager:
         if self.NUMBER_OF_STATEMENTS != 1:
             raise OFXImportValidationError('Only one account per OFX file is supported.')
 
+        # noinspection PyUnresolvedReferences
         self.BANK_NAME = self.ofx_data.fi.org if hasattr(self.ofx_data.fi, 'org') else None
+        # noinspection PyUnresolvedReferences
         self.FID = self.ofx_data.fi.fid if hasattr(self.ofx_data.fi, 'fid') else None
         self.ACCOUNT_DATA: Optional[Dict] = None
 

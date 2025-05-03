@@ -8,6 +8,7 @@ from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL
 from django_ledger.models import BillModel, ItemTransactionModel, EntityModel
 from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
+
 class BillModelCreateForm(ModelForm):
     def __init__(self, *args, entity_model: EntityModel, **kwargs):
         super().__init__(*args, **kwargs)
@@ -296,7 +297,7 @@ class BaseBillItemTransactionFormset(BaseModelFormSet):
                     form.fields['fund'].disabled = True
 
 
-def get_bill_itemtxs_formset_class(bill_model: BillModel):
+def get_bill_itemtxs_formset_class():
     BillItemTransactionFormset = modelformset_factory(
         model=ItemTransactionModel,
         form=BillItemTransactionForm,

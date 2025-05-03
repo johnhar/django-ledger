@@ -12,9 +12,12 @@ urlpatterns = [
 # GraphQl API Support...
 try:
     if DJANGO_LEDGER_GRAPHQL_SUPPORT_ENABLED:
+        # noinspection PyUnresolvedReferences
         from django_ledger.contrib.django_ledger_graphene.api import schema
+        # noinspection PyUnresolvedReferences
         from django_ledger.contrib.django_ledger_graphene.views import DjangoLedgerOAuth2GraphQLView
 
+        # noinspection PyUnresolvedReferences
         urlpatterns += [
             path('api/v1/graphql/', DjangoLedgerOAuth2GraphQLView.as_view(graphiql=settings.DEBUG, schema=schema)),
             path('api/v1/o/', include('oauth2_provider.urls', namespace='oauth2_provider')),

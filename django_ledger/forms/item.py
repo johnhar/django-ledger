@@ -1,4 +1,4 @@
-from django.forms import ModelForm, TextInput, Select, ChoiceField
+from django.forms import ModelForm, TextInput, Select
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io.roles import GROUP_INCOME, ASSET_CA_INVENTORY, GROUP_EXPENSES, GROUP_COGS
@@ -68,7 +68,7 @@ class ProductCreateForm(ModelForm):
             self.fields['uom'].queryset = uom_qs
 
         if 'item_type' in self.fields:
-            self.fields['item_type'].choices = ItemModel.ITEM_TYPE_CHOICES_PRODUCT
+            self.fields['item_type'].choices = ItemModel.ITEM_TYPE_VALID_CHOICES
 
     class Meta:
         model = ItemModel

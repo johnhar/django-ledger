@@ -26,6 +26,7 @@ class BankAccountMutation(graphene.Mutation):
     # The class attributes define the response of the mutation
     bank_account = graphene.Field(BankAccountType)
 
+    # noinspection PyUnusedLocal
     @classmethod
     def mutate(
             cls,
@@ -54,6 +55,7 @@ class BankAccountMutation(graphene.Mutation):
             user_model=info.context.user)
         bank_account_model.save()
         # Notice we return an instance of this mutation
+        # noinspection PyArgumentList
         return BankAccountMutation(bank_account=bank_account_model)
 
 

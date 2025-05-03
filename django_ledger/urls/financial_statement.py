@@ -2,6 +2,7 @@ from django.urls import path
 
 from django_ledger import views
 
+# noinspection PyCallingNonCallable
 urlpatterns = [
 
     # BALANCE SHEET Reports...

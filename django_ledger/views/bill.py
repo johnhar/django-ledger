@@ -39,6 +39,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class BillModelModelBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             entity_model: EntityModel = self.get_authorized_entity_instance()
@@ -78,12 +79,12 @@ class BillModelCreateView(BillModelModelBaseView, CreateView):
         if self.for_purchase_order:
             po_pk = self.kwargs['po_pk']
             po_item_uuids_qry_param = self.request.GET.get('item_uuids')
-            if po_item_uuids_qry_param:
-                try:
-                    po_item_uuids = po_item_uuids_qry_param.split(',')
-                except:
-                    return HttpResponseBadRequest()
-            else:
+            if not po_item_uuids_qry_param:
+                return HttpResponseBadRequest()
+            # noinspection PyBroadException
+            try:
+                po_item_uuids = po_item_uuids_qry_param.split(',')
+            except:
                 return HttpResponseBadRequest()
 
             po_qs = PurchaseOrderModel.objects.for_entity(
@@ -300,6 +301,10 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
     http_method_names = ['get', 'post']
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_form(self, form_class=None):
         form_class = self.get_form_class()
         entity_model: EntityModel = self.get_authorized_entity_instance()
@@ -376,9 +381,9 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
 
         itemtxs_qs = itemtxs_formset.get_queryset() if itemtxs_formset else None
         if not itemtxs_formset:
-            itemtxs_formset_class = get_bill_itemtxs_formset_class(bill_model)
+            itemtxs_formset_class = get_bill_itemtxs_formset_class()
             itemtxs_formset = itemtxs_formset_class(entity_model=entity_model, bill_model=bill_model)
-        itemtxs_qs, itemtxs_agg = bill_model.get_itemtxs_data(queryset=itemtxs_qs)
+        itemtxs_qs, itemtxs_agg = bill_model.get_itemtxs_data(batch=itemtxs_qs)
 
         has_po = any(i.po_model_id for i in itemtxs_qs)
 
@@ -446,7 +451,7 @@ class BillModelUpdateView(BillModelModelBaseView, UpdateView):
 
             self.object = bill_model
 
-            bill_itemtxs_formset_class = get_bill_itemtxs_formset_class(bill_model)
+            bill_itemtxs_formset_class = get_bill_itemtxs_formset_class()
             itemtxs_formset = bill_itemtxs_formset_class(
                 request.POST,
                 bill_model=bill_model,

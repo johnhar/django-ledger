@@ -46,6 +46,7 @@ class JournalEntryModelModelBaseView(DjangoLedgerSecurityMixIn):
     def get_ledger_model(self) -> LedgerModel:
         if self.ledger_model is None:
             entity_model: EntityModel = self.get_authorized_entity_instance()
+            # noinspection PyUnresolvedReferences
             self.ledger_model = entity_model.get_ledgers().get(uuid__exact=self.kwargs['ledger_pk'])
         return self.ledger_model
 
@@ -181,6 +182,10 @@ class JournalEntryModelTXSDetailView(JournalEntryModelModelBaseView, DetailView)
         'page_title': PAGE_TITLE
     }
     context_object_name = 'journal_entry'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
 
     def get_queryset(self):
         qs = super().get_queryset()

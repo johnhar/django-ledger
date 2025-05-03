@@ -40,7 +40,9 @@ from django_ledger.models import (EntityModel, TransactionModel, VendorModel, Cu
 from django_ledger.utils import (generate_random_sku, generate_random_upc, generate_random_item_id)
 
 try:
+    # noinspection PyUnresolvedReferences
     from faker import Faker
+    # noinspection PyUnresolvedReferences
     from faker.providers import company, address, phone_number, bank
 
     FAKER_IMPORTED = True
@@ -62,12 +64,18 @@ class EntityDataGenerator(LoggingMixIn):
         The Django user model that administers the entity.
     entity_model : EntityModel
         The Entity model to populate.
-    start_dttm: datetime
+    start_date: datetime
         The start datetime for new transactions. All transactions will be posted no earlier than this date.
+    local_date: datetime
+        The local date (today).
+    tx_quantity: int
+        The number of transactions to generate.
+    localtime: datetime
+        The local time.
     capital_contribution: Decimal
         The initial capital contribution amount for the Entity Model. This will help fund the entity.
-    days_forward: int
-        The number of days to span from the start_dttm for new transactions.
+    DAYS_FORWARD: int
+        The number of days to span from the start_date for new transactions.
 
     """
 
@@ -531,10 +539,10 @@ class EntityDataGenerator(LoggingMixIn):
             i.full_clean()
 
         estimate_model.full_clean()
-        estimate_model.update_state(itemtxs_qs=estimate_items)
+        estimate_model.update_state(batch=estimate_items)
         estimate_model.save()
 
-        estimate_items = estimate_model.itemtransactionmodel_set.bulk_create(objs=estimate_items)
+        estimate_model.itemtransactionmodel_set.bulk_create(objs=estimate_items)
 
         if random() > 0.25:
             date_in_review = self.get_next_timestamp(date_draft)
@@ -580,7 +588,7 @@ class EntityDataGenerator(LoggingMixIn):
         for bi in bill_items:
             bi.full_clean()
 
-        bill_model.update_amount_due(itemtxs_qs=bill_items)
+        bill_model.update_amount_due(batch=bill_items)
         bill_model.itemtransactionmodel_set.bulk_create(bill_items)
         bill_model.full_clean()
         bill_model.save()
@@ -635,7 +643,7 @@ class EntityDataGenerator(LoggingMixIn):
 
         self.logger.info(f'Creating entity purchase order {po_model.po_number}...')
         po_items = po_model.itemtransactionmodel_set.bulk_create(po_items)
-        po_model.update_state(itemtxs_qs=po_items)
+        po_model.update_state(batch=po_items)
         po_model.full_clean()
         po_model.save()
 
@@ -670,7 +678,7 @@ class EntityDataGenerator(LoggingMixIn):
                         po_i.po_item_status = ItemTransactionModel.STATUS_RECEIVED
                         po_i.full_clean()
 
-                    bill_model.update_amount_due(itemtxs_qs=po_items)
+                    bill_model.update_amount_due(batch=po_items)
                     bill_model.full_clean()
                     bill_model.update_state()
                     bill_model.save()
@@ -779,7 +787,7 @@ class EntityDataGenerator(LoggingMixIn):
                     invoice_items.append(itm)
 
         invoice_items = invoice_model.itemtransactionmodel_set.bulk_create(invoice_items)
-        invoice_model.update_amount_due(itemtxs_qs=invoice_items)
+        invoice_model.update_amount_due(itemtxs_batch=invoice_items)
         invoice_model.full_clean()
         invoice_model.save()
 
@@ -788,7 +796,7 @@ class EntityDataGenerator(LoggingMixIn):
 
             try:
                 invoice_model.mark_as_review(commit=True, date_in_review=date_review)
-            except InvoiceModelValidationError as e:
+            except InvoiceModelValidationError:
                 # invoice cannot be marked as in review...
                 return
 
@@ -843,7 +851,7 @@ class EntityDataGenerator(LoggingMixIn):
 
     def create_closing_entry(self):
         closing_date = self.start_date + timedelta(days=int(self.DAYS_FORWARD / 2))
-        ce_model, ce_txs = self.entity_model.close_books_for_month(
+        self.entity_model.close_books_for_month(
             year=closing_date.year,
             month=closing_date.month,
             post_closing_entry=True

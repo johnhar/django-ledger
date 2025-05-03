@@ -128,7 +128,7 @@ class DjangoLedgerBaseTest(TestCase):
             'zip_code': '28202',
             'country': 'US',
             'email': 'mytest@testinginc.com',
-            'website': 'http://www.mytestingco.com',
+            'website': 'https://www.mytestingco.com',
             'fy_start_month': choice(cls.FY_STARTS),
             'admin': cls.user_model,
             'accrual_method': next(cls.accrual_cycle)

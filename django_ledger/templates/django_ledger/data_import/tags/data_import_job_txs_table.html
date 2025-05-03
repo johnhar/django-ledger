@@ -40,9 +40,9 @@
                     <td>{{ forloop.counter }}</td>
                     {% for hidden_field in txf.hidden_fields %}{{ hidden_field }}{% endfor %}
                     {% if txf.instance.is_children %}
-                        <td class="has-background-primary-light" style="border: 0px"></td>
-                        <td class="has-background-primary-light" style="border: 0px"></td>
-                        <td class="has-background-primary-light" style="border: 0px"></td>
+                        <td class="has-background-primary-light" style="border: 0"></td>
+                        <td class="has-background-primary-light" style="border: 0"></td>
+                        <td class="has-background-primary-light" style="border: 0"></td>
                         <td>{{ txf.amount_split }}</td>
                     {% else %}
                         <td>{{ txf.instance.date_posted }}</td>

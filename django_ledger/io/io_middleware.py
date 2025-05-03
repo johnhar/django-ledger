@@ -316,6 +316,7 @@ class BalanceSheetIOMiddleware:
 
             for bs_role, bs_role_data in bs_context.items():
                 for acc_role, role_data in bs_role_data['roles'].items():
+                    # noinspection PyTypeChecker
                     role_data['total_balance'] = sum(a['balance'] for a in role_data['accounts'])
                     role_data['role_name'] = roles_module.ACCOUNT_LIST_ROLE_VERBOSE[acc_role]
 
@@ -496,7 +497,6 @@ class CashFlowStatementIOMiddleware:
         self.IO_DATA[self.CFS_DIGEST_KEY]['net_cash_by_activity']['FINANCING'] = net_cash
 
     def investing(self):
-        group_balances = self.IO_DATA[AccountGroupIOMiddleware.GROUP_BALANCE_KEY]
         investing_activities = dict()
         investing_activities['GROUP_CFS_INVESTING_SECURITIES'] = {
             'description': 'Purchase, Maturity and Sales of Investments & Securities',

@@ -68,7 +68,7 @@ class TransactionModelFormSet(BaseModelFormSet):
         if any(self.errors):
             return
         for form in self.forms:
-            # Skip forms marked for deletion
+            # noinspection PyUnresolvedReferences
             if self.can_delete and self._should_delete_form(form):
                 continue
 

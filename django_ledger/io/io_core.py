@@ -336,7 +336,7 @@ def validate_io_timestamp(
       local time for cases where parsing is not possible.
     """
     if not dt:
-        return
+        return None
 
     if isinstance(dt, datetime):
         if is_naive(dt):
@@ -374,6 +374,7 @@ def validate_io_timestamp(
 
     if no_parse_localdate:
         return localtime()
+    return None
 
 
 def validate_dates(
@@ -602,7 +603,8 @@ class IODatabaseMixIn:
             message=_(f'IODatabaseMixIn not compatible with {self.__class__.__name__} model.')
         )
 
-    def get_transaction_model(self):
+    # noinspection PyUnresolvedReferences
+    def get_transaction_model(self) -> 'TransactionModel':
         """
         Retrieve the transaction model class used for handling transactions.
 
@@ -654,7 +656,7 @@ class IODatabaseMixIn:
                         accounts: Optional[Union[str, List[str], Set[str]]] = None,
                         posted: bool = True,
                         exclude_zero_bal: bool = True,
-                        use_closing_entries: bool = False,
+                        use_closing_entries: Optional[bool] = False,
                         **kwargs) -> IOResult:
         """
         Aggregates transaction data based on the provided parameters to generate a
@@ -714,10 +716,10 @@ class IODatabaseMixIn:
         exclude_zero_bal : bool
             If True, transactions with zero-balance amounts will be excluded.
             Defaults to True.
-        use_closing_entries : bool
+        use_closing_entries : Optional[bool]
             Specifies whether closing entries should be used to optimize database
-            aggregation. If not provided, the value is determined by the system-global
-            setting.
+            aggregation. If not provided (i.e. equals None), the value is determined
+            by the system-global setting.
         kwargs : dict
             Additional parameters that can be passed for extended flexibility or
             customization when filtering and processing transactions.
@@ -735,11 +737,14 @@ class IODatabaseMixIn:
         # get_initial txs_queryset... where the IO model is operating from??...
         if self.is_entity_model():
             if entity_slug:
+                # noinspection PyUnresolvedReferences
                 if entity_slug != self.slug:
+                    # noinspection PyUnresolvedReferences
                     raise IOValidationError('Inconsistent entity_slug. '
                                             f'Provided {entity_slug} does not match actual {self.slug}')
             if unit_slug:
 
+                # noinspection PyUnresolvedReferences
                 txs_queryset_init = TransactionModel.objects.for_entity(
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
@@ -909,6 +914,7 @@ class IODatabaseMixIn:
                 )
 
         if io_result.is_bounded:
+            # noinspection PyUnboundLocalVariable
             txs_queryset = txs_queryset.annotate(
                 amount_io=Case(
                     When(
@@ -930,7 +936,7 @@ class IODatabaseMixIn:
         ]
 
         # specifies the aggregations that will be applied to the resulting groups
-        ANNOTATE = {'balance': Sum('amount')}
+        ANNOTATE: Dict = {'balance': Sum('amount')}
         if io_result.is_bounded:
             ANNOTATE = {'balance': Sum('amount_io')}
 
@@ -976,7 +982,7 @@ class IODatabaseMixIn:
                       by_activity: bool = False,
                       by_tx_type: bool = False,
                       by_period: bool = False,
-                      use_closing_entries: bool = False,
+                      use_closing_entries: Optional[bool] = False,
                       force_queryset_sorting: bool = False,
                       **kwargs) -> IOResult:
         """
@@ -1021,8 +1027,8 @@ class IODatabaseMixIn:
             Whether to group the results by transaction type. Defaults to False.
         by_period : bool
             Whether to group the results by period (year and month). Defaults to False.
-        use_closing_entries : bool
-            Whether to include closing entries in the computation. Defaults  to False.
+        use_closing_entries : Optional[bool]
+            Whether to include closing entries in the computation. Defaults to False.
         force_queryset_sorting : bool
             Whether to force sorting of the transaction queryset. Defaults to  False.
         **kwargs : dict
@@ -1055,8 +1061,6 @@ class IODatabaseMixIn:
             accounts=accounts,
             use_closing_entries=use_closing_entries,
             **kwargs)
-
-        TransactionModel = self.get_transaction_model()
 
         for tx_model in io_result.txs_queryset:
             if tx_model['account__balance_type'] != tx_model['tx_type']:
@@ -1187,7 +1191,7 @@ class IODatabaseMixIn:
                balance_sheet_statement: bool = False,
                income_statement: bool = False,
                cash_flow_statement: bool = False,
-               use_closing_entry: Optional[bool] = None,
+               use_closing_entries: Optional[bool] = None,
                **kwargs) -> IODigestContextManager:
         """
         Processes financial data and generates various financial statements, ratios, or activity digests
@@ -1245,8 +1249,9 @@ class IODatabaseMixIn:
             If `True`, generates an income statement as part of the processed result.
         cash_flow_statement : bool, default=False
             If `True`, prepares a cash flow statement based on the provided data.
-        use_closing_entry : Optional[bool]
+        use_closing_entries : Optional[bool]
             Specifies whether to account for closing entries in the financial statement computation.
+            Default is None, i.e. use system default.
         **kwargs
             Additional named arguments that can be passed to adjust the behavior of specific processing
             modules or middleware.
@@ -1301,7 +1306,7 @@ class IODatabaseMixIn:
             by_fund=by_fund,
             by_activity=by_activity,
             by_tx_type=by_tx_type,
-            use_closing_entry=use_closing_entry,
+            use_closing_entries=use_closing_entries,
             **kwargs
         )
 
@@ -1364,6 +1369,7 @@ class IODatabaseMixIn:
 
         return IODigestContextManager(io_state=io_state)
 
+    # noinspection PyUnusedLocal
     def commit_txs(self,
                    je_timestamp: Union[str, datetime, date],
                    je_txs: List[Dict],
@@ -1451,6 +1457,7 @@ class IODatabaseMixIn:
                     )
 
         if self.is_ledger_model():
+            # noinspection PyUnresolvedReferences
             if self.is_locked():
                 raise IOValidationError(
                     message=_('Cannot commit on locked ledger')
@@ -1468,6 +1475,7 @@ class IODatabaseMixIn:
             isinstance(self, lazy_loader.get_entity_model()),
             je_ledger_model is not None,
         ]):
+            # noinspection PyUnresolvedReferences
             if je_ledger_model.entity_id != self.uuid:
                 raise IOValidationError(f'LedgerModel {je_ledger_model} does not belong to {self}')
 
@@ -1476,6 +1484,7 @@ class IODatabaseMixIn:
             isinstance(self, lazy_loader.get_entity_model()),
             je_unit_model is not None,
         ]):
+            # noinspection PyUnresolvedReferences
             if je_unit_model.entity_id != self.uuid:
                 raise IOValidationError(f'EntityUnitModel {je_unit_model} does not belong to {self}')
 
@@ -1493,8 +1502,10 @@ class IODatabaseMixIn:
         if force_je_retrieval:
             try:
                 if isinstance(je_timestamp, (datetime, str)):
+                    # noinspection PyUnusedLocal
                     je_model = je_ledger_model.journal_entries.get(timestamp__exact=je_timestamp)
                 elif isinstance(je_timestamp, date):
+                    # noinspection PyUnusedLocal
                     je_model = je_ledger_model.journal_entries.get(timestamp__date__exact=je_timestamp)
                 else:
                     raise IOValidationError(message=_(f'Invalid timestamp type {type(je_timestamp)}'))
@@ -1606,6 +1617,8 @@ class IOReportMixIn:
         IODigestContextManager
             A context manager for handling the digestion process of the balance sheet.
         """
+        # self.digest() is in IODatabaseMixin
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             to_date=to_date,
@@ -1732,6 +1745,7 @@ class IOReportMixIn:
         IODigestContextManager
             A context manager containing the processed income statement data.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             from_date=from_date,
@@ -1857,6 +1871,7 @@ class IOReportMixIn:
         IODigestContextManager
             Context manager providing the digested cash flow statement.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             from_date=from_date,
@@ -1982,6 +1997,7 @@ class IOReportMixIn:
             Represents the context manager containing the digested financial
             statements for the specified date range.
         """
+        # noinspection PyUnresolvedReferences
         return self.digest(
             from_date=from_date,
             to_date=to_date,

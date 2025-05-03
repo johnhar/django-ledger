@@ -47,6 +47,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'dev_env.urls'
 
+# noinspection PyUnresolvedReferences
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -160,9 +161,6 @@ CACHES = {
 #         }
 #     }
 # }
-
-
-
 
 # django-debug-toolbar needs to know on which IPs we should be showing the toolbar
 INTERNAL_IPS = ('127.0.0.1',)

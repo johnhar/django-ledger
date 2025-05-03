@@ -18,7 +18,7 @@ financial statement production in the Django Ledger framework.
 """
 
 from datetime import datetime, date
-from typing import List, Union, Optional, Set
+from typing import List, Union, Optional, Set, TypeVar, Generic
 from uuid import uuid4, UUID
 
 from django.contrib.auth import get_user_model
@@ -42,15 +42,34 @@ UserModel = get_user_model()
 class TransactionModelValidationError(ValidationError):
     pass
 
+T = TypeVar('T', bound='TransactionModel')
+QS = TypeVar('QS', bound='TransactionModelQuerySet')
 
-class TransactionModelQuerySet(QuerySet):
+class TransactionModelQuerySet(QuerySet[T], Generic[T]):
     """
     A custom QuerySet class tailored for `TransactionModel` objects. It includes a collection
     of methods to efficiently and safely retrieve and filter transactions from the database
     based on common use cases.
     """
 
-    def posted(self) -> QuerySet:
+    # override a couple methods to get type checking working
+    def filter(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().filter(*args, **kwargs)
+
+    def order_by(self: QS, *field_names) -> QS:
+        # noinspection PyTypeChecker
+        return super().order_by(*field_names)
+
+    def select_related(self: QS, *fields) -> QS:
+        # noinspection PyTypeChecker
+        return super().select_related(*fields)
+
+    def annotate(self: QS, *args, **kwargs) -> QS:
+        # noinspection PyTypeChecker
+        return super().annotate(*args, **kwargs)
+
+    def posted(self):
         """
         Retrieves transactions that are part of a posted journal entry and ledger.
 
@@ -570,9 +589,10 @@ def transactionmodel_presave(instance: TransactionModel, **kwargs):
     kwargs : dict
         Additional keyword arguments, such as the optional `bypass_account_state`.
 
-    Validations
-    -----------
+    Notes
+    -----
     The function performs the following validations:
+
     1. **Account Transactionality**:
        If the `bypass_account_state` flag is not provided or set to `False`,
        it verifies whether the associated account can process transactions
@@ -599,8 +619,9 @@ def transactionmodel_presave(instance: TransactionModel, **kwargs):
           preventing modification of any related transactions. The error message
           describes the locked journal entry constraint.
 
-    Example
-    -------
+    Examples
+    --------
+
     ```python
     instance = TransactionModel(...)
     try:

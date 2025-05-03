@@ -26,6 +26,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class PurchaseOrderModelModelViewQuerySetMixIn:
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = PurchaseOrderModel.objects.for_entity(
@@ -88,6 +89,7 @@ class PurchaseOrderModelCreateView(DjangoLedgerSecurityMixIn,
     }
     for_estimate = False
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, **kwargs):
         response = super(PurchaseOrderModelCreateView, self).get(request, entity_slug, **kwargs)
         if self.for_estimate and 'ce_pk' in self.kwargs:
@@ -174,6 +176,10 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
     }
     action_update_items = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
+
     def get_context_data(self, itemtxs_formset=None, **kwargs):
         context = super().get_context_data(**kwargs)
         po_model: PurchaseOrderModel = self.object
@@ -184,7 +190,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
         # continue here: pass item QS to item_form...
         if not itemtxs_formset:
             itemtxs_qs = self.get_po_itemtxs_qs(po_model)
-            itemtxs_qs, itemtxs_agg = po_model.get_itemtxs_data(queryset=itemtxs_qs)
+            itemtxs_qs, itemtxs_agg = po_model.get_itemtxs_data(batch=itemtxs_qs)
             po_itemtxs_formset_class = get_po_itemtxs_formset_class(po_model)
             itemtxs_formset = po_itemtxs_formset_class(
                 entity_slug=self.kwargs['entity_slug'],
@@ -208,6 +214,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
 
         return context
 
+    # noinspection PyMethodOverriding
     def get(self, request, entity_slug, po_pk, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
@@ -219,6 +226,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
             )
         return super(PurchaseOrderModelUpdateView, self).get(request, entity_slug, po_pk, *args, **kwargs)
 
+    # noinspection PyMethodOverriding
     def post(self, request, entity_slug, *args, **kwargs):
         if self.action_update_items:
 
@@ -258,7 +266,7 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                             itemtxs.po_model_id = po_model.uuid
                         itemtxs.clean()
 
-                    itemtxs_list = itemtxs_formset.save()
+                    itemtxs_formset.save()
                     po_model.update_state()
                     po_model.clean()
                     po_model.save(update_fields=['po_amount',
@@ -314,7 +322,8 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                            'po_pk': po_pk
                        })
 
-    def get_po_itemtxs_qs(self, po_model: PurchaseOrderModel):
+    @staticmethod
+    def get_po_itemtxs_qs(po_model: PurchaseOrderModel):
         return po_model.itemtransactionmodel_set.select_related('bill_model', 'po_model').order_by('created')
 
     def form_valid(self, form: BasePurchaseOrderModelUpdateForm):
@@ -339,7 +348,8 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                                          f'All PO items must be billed before marking'
                                          f' PO: {po_model.po_number} as fulfilled.',
                                          extra_tags='is-danger')
-                    return self.get(self.request)
+                    return self.get(self.request, entity_slug=self.kwargs['entity_slug'],
+                                    po_pk=po_model.uuid)
 
                 else:
                     if not all([i.bill_model.is_paid() for i in po_items_qs]):
@@ -348,7 +358,8 @@ class PurchaseOrderModelUpdateView(DjangoLedgerSecurityMixIn,
                                              f'All bills must be paid before marking'
                                              f' PO: {po_model.po_number} as fulfilled.',
                                              extra_tags='is-success')
-                        return self.get(self.request)
+                        return self.get(self.request, entity_slug=self.kwargs['entity_slug'],
+                                        po_pk=po_model.uuid)
 
                 po_items_qs.update(po_item_status=ItemTransactionModel.STATUS_RECEIVED)
 
@@ -381,7 +392,7 @@ class PurchaseOrderModelDetailView(DjangoLedgerSecurityMixIn,
 
         po_model: PurchaseOrderModel = self.object
         po_items_qs, item_data = po_model.get_itemtxs_data(
-            queryset=po_model.itemtransactionmodel_set.all().select_related('item_model', 'bill_model')
+            batch=po_model.itemtransactionmodel_set.all().select_related('item_model', 'bill_model')
         )
         context['po_items'] = po_items_qs
         context['po_total_amount'] = sum(
@@ -401,6 +412,10 @@ class PurchaseOrderModelDeleteView(DjangoLedgerSecurityMixIn,
         'hide_menu': True,
         'header_subtitle_icon': 'uil:bill'
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)

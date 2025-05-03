@@ -1,4 +1,4 @@
-import graphene
+# import graphene
 from graphene import relay
 from graphene_django import DjangoObjectType
 
@@ -12,7 +12,6 @@ class ChartOfAccountsModelType(DjangoObjectType):
             'uuid',
             'slug',
             'name',
-            'locked'
         ]
         interfaces = (relay.Node,)
 

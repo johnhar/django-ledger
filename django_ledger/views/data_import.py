@@ -23,6 +23,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class ImportJobModelViewBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = ImportJobModel.objects.for_entity(
@@ -153,6 +154,10 @@ class DataImportJobDetailView(ImportJobModelViewBaseView, DetailView):
     import_transactions = False
     form_class = StagedTransactionModelFormSet
     http_method_names = ['get', 'post']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object = None
 
     def get_form_kwargs(self):
         return {

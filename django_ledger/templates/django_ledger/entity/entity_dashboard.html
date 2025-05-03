@@ -115,7 +115,8 @@
 
 {% block script_bottom %}
     {{ block.super }}
-    <script>
+    <!--suppress JSUnresolvedReference -->
+  <script>
         djLedger.renderPnLChart("{{ pnl_chart_id }}", "{{ view.kwargs.entity_slug }}", fromDate, toDate)
         djLedger.renderNetReceivablesChart("{{ receivables_chart_id }}", "{{ view.kwargs.entity_slug }}", fromDate, toDate)
         djLedger.renderNetPayablesChart("{{ payables_chart_id }}", "{{ view.kwargs.entity_slug }}", fromDate, toDate)

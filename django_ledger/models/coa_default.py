@@ -371,6 +371,7 @@ def verify_unique_code():
     """
     A function that verifies that there are no duplicate code in the Default CoA during the development and launch.
     """
+    # noinspection PyShadowingNames
     code_list = [i['code'] for i in get_default_coa()]
     code_set = set(code_list)
     if not len(code_list) == len(code_set):

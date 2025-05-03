@@ -35,6 +35,7 @@ class UnitOfMeasureModelModelBaseView(DjangoLedgerSecurityMixIn):
         if self.queryset is None:
             entity_model: EntityModel = self.get_authorized_entity_instance()
             self.queryset = entity_model.unitofmeasuremodel_set.all()
+        # noinspection PyUnresolvedReferences
         return super().get_queryset()
 
 
@@ -167,6 +168,7 @@ class ProductItemModelModelBaseView(DjangoLedgerSecurityMixIn):
                 'cogs_account',
                 'inventory_account',
                 'uom').order_by('-updated')
+        # noinspection PyUnresolvedReferences
         return super().get_queryset()
 
 
@@ -289,6 +291,7 @@ class ServiceItemModelModelBaseView(DjangoLedgerSecurityMixIn):
                 'cogs_account',
                 'inventory_account',
                 'uom').order_by('-updated')
+        # noinspection PyUnresolvedReferences
         return super().get_queryset()
 
 
@@ -408,6 +411,7 @@ class ExpenseItemItemModelModelBaseView(DjangoLedgerSecurityMixIn):
             self.queryset = entity_model.itemmodel_set.expenses().select_related(
                 'expense_account',
                 'uom').order_by('-updated')
+        # noinspection PyUnresolvedReferences
         return super().get_queryset()
 
 
@@ -493,6 +497,7 @@ class InventoryItemItemModelModelBaseView(DjangoLedgerSecurityMixIn):
                 'cogs_account',
                 'uom'
             ).order_by('-updated')
+        # noinspection PyUnresolvedReferences
         return super().get_queryset()
 
 

@@ -8,9 +8,7 @@ from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from django_ledger.io.io_core import get_localdate
-from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_DEFERRED_REVENUE, \
-    LIABILITY_CL_ACC_PAYABLE
+from django_ledger.io.roles import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_DEFERRED_REVENUE
 from django_ledger.models import EntityModel, BillModel, VendorModel
 from django_ledger.tests.base import DjangoLedgerBaseTest
 from django_ledger.urls.bill import urlpatterns as bill_urls
@@ -266,17 +264,18 @@ class BillModelTests(DjangoLedgerBaseTest):
         account_qs = entity_model.get_default_coa_accounts()
         len(account_qs)
 
+        # noinspection PyUnusedLocal
         a_vendor_model = choice(entity_model.get_vendors())
 
-        bill_data = {
-            'vendor': a_vendor_model.uuid,
-            'date_draft': get_localdate(),
-            'terms': BillModel.TERMS_NET_30,
-            'cash_account_id': account_qs.filter(role__exact=ASSET_CA_CASH),
-            'prepaid_account_id': account_qs.filter(role__exact=ASSET_CA_PREPAID),
-            'unearned_account_id': account_qs.filter(role__exact=LIABILITY_CL_ACC_PAYABLE),
-        }
-
+        # bill_data = {
+        #     'vendor': a_vendor_model.uuid,
+        #     'date_draft': get_localdate(),
+        #     'terms': BillModel.TERMS_NET_30,
+        #     'cash_account_id': account_qs.filter(role__exact=ASSET_CA_CASH),
+        #     'prepaid_account_id': account_qs.filter(role__exact=ASSET_CA_PREPAID),
+        #     'unearned_account_id': account_qs.filter(role__exact=LIABILITY_CL_ACC_PAYABLE),
+        # }
+        #
         # create_response = self.CLIENT.post(bill_create_url, data=bill_data, follow=True)
         # self.assert
         # self.assertFormError(create_response, form='form', field=None,

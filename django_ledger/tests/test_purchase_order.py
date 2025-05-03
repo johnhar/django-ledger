@@ -143,6 +143,7 @@ class PurchaseOrderModelTests(DjangoLedgerBaseTest):
                 'entity_slug': entity_model.slug,
                 'po_pk': po_model.uuid
             })
+            # noinspection PyUnusedLocal
             po_delete_url = reverse('django_ledger:po-delete', kwargs={
                 'entity_slug': entity_model.slug,
                 'po_pk': po_model.uuid

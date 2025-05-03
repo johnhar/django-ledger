@@ -3,7 +3,7 @@ from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 
-from django_ledger.models import JournalEntryModel
+from django_ledger.models import JournalEntryModel, JournalEntryModelQuerySet
 
 
 class JournalEntryNode(DjangoObjectType):
@@ -22,14 +22,22 @@ class JournalEntryQuery(graphene.ObjectType):
         JournalEntryNode, slug_name=graphene.String(
             required=True), pk_ledger=graphene.UUID())
 
-    def resolve_all_journal_entry(self, info, slug_name, pk_ledger, **kwargs):
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def resolve_all_journal_entry(info, slug_name, pk_ledger, **kwargs) -> JournalEntryModelQuerySet:
         if info.context.user.is_authenticated:
             sort = info.context.GET.get('sort')
-            if not sort:
-                sort = '-updated'
-                return JournalEntryModel.objects.for_entity(
+            je_qs = JournalEntryModel.objects.for_entity(
                     entity_slug=slug_name,
                     user_model=info.context.user
-                ).for_ledger(ledger_pk=pk_ledger).order_by(sort)
+                ).for_ledger(ledger_pk=pk_ledger)
+            if not sort:
+                sort = '-updated'
+                return je_qs.order_by(sort)
+            else:
+                raise NotImplementedError('Update the code to return the right value.')
+                # This code would have originally returned None.  But logically it should probably return
+                # the unsorted query, as below:
+                # return je_qs
         else:
             return JournalEntryModel.objects.none()

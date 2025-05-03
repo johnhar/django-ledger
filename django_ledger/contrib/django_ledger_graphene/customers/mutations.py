@@ -29,6 +29,7 @@ class CustomerMutation(graphene.Mutation):
     # The class attributes define the response of the mutation
     customer = graphene.Field(CustomerType)
 
+    # noinspection PyUnusedLocal
     @classmethod
     def mutate(
             cls,
@@ -64,6 +65,7 @@ class CustomerMutation(graphene.Mutation):
         customer_model.entity_model = entity_model
         customer_model.save()
         # Notice we return an instance of this mutation
+        # noinspection PyArgumentList
         return CustomerMutation(customer=customer_model)
 
 

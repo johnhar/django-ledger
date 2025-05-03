@@ -87,16 +87,17 @@ class JournalEntryModelInLine(TabularInline):
             ])
         return super().has_delete_permission(request, obj)
 
-    def view_txs_link(self, obj: JournalEntryModel):
+    @staticmethod
+    def view_txs_link(obj: JournalEntryModel):
         detail_url = obj.get_detail_url()
         return format_html(
             format_string='<a class="viewlink" target="_blank" href="{url}">View Txs</a>',
             url=detail_url
         )
 
-    def edit_txs_link(self, obj: JournalEntryModel):
+    @staticmethod
+    def edit_txs_link(obj: JournalEntryModel):
         detail_url = obj.get_detail_txs_url()
-        next_url = None
         return format_html(
             format_string='<a class="changelink" target="_blank" href="{url}">Edit Txs</a>',
             url=detail_url
@@ -104,16 +105,19 @@ class JournalEntryModelInLine(TabularInline):
 
 
 class LedgerModelAdmin(ModelAdmin):
+    # noinspection PyUnresolvedReferences
     readonly_fields = [
         'entity',
         'posted',
         'locked'
     ]
+    # noinspection PyUnresolvedReferences
     list_filter = [
         'posted',
         'locked',
         'entity__name'
     ]
+    # noinspection PyUnresolvedReferences
     list_display = [
         'name',
         'ledger_xid',
@@ -169,7 +173,8 @@ class LedgerModelAdmin(ModelAdmin):
             })
         ]
 
-    def get_entity_model(self, request) -> EntityModel:
+    @staticmethod
+    def get_entity_model(request) -> EntityModel:
         entity_slug = request.GET.get('entity_slug')
         entity_model_qs = EntityModel.objects.for_user(user_model=request.user)
         entity_model = get_object_or_404(entity_model_qs, slug__exact=entity_slug)
@@ -204,7 +209,8 @@ class LedgerModelAdmin(ModelAdmin):
     is_extended.boolean = True
 
     # ACTIONS....
-    def post(self, request, queryset):
+    @staticmethod
+    def post(request, queryset):
         for obj in queryset:
             try:
                 obj.post(raise_exception=True, commit=False)
@@ -220,7 +226,8 @@ class LedgerModelAdmin(ModelAdmin):
                 'updated'
             ])
 
-    def lock(self, request, queryset):
+    @staticmethod
+    def lock(request, queryset):
         for obj in queryset:
             try:
                 obj.lock(raise_exception=True, commit=False)
@@ -237,7 +244,8 @@ class LedgerModelAdmin(ModelAdmin):
                 'updated'
             ])
 
-    def unpost(self, request, queryset):
+    @staticmethod
+    def unpost(request, queryset):
         for obj in queryset:
             try:
                 obj.unpost(raise_exception=True, commit=False)
@@ -253,7 +261,8 @@ class LedgerModelAdmin(ModelAdmin):
                 'updated'
             ])
 
-    def unlock(self, request, queryset):
+    @staticmethod
+    def unlock(request, queryset):
         for obj in queryset:
             try:
                 obj.unlock(raise_exception=True, commit=False)
@@ -270,10 +279,12 @@ class LedgerModelAdmin(ModelAdmin):
                 'updated'
             ])
 
-    def journal_entry_count(self, obj):
+    @staticmethod
+    def journal_entry_count(obj):
         return obj.journal_entries__count
 
-    def earliest_journal_entry(self, obj):
+    @staticmethod
+    def earliest_journal_entry(obj):
         return obj.earliest_timestamp
 
     def save_model(self, request, obj: LedgerModel, form, change):
