@@ -17,6 +17,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class ChartOfAccountModelModelBaseViewMixIn(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             entity_model = self.get_authorized_entity_instance()

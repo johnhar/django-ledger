@@ -267,6 +267,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         except AttributeError:
             if force_evaluation:
                 try:
+                    # noinspection PyUnresolvedReferences
                     earliest_je = self.journal_entries.posted().order_by('-timestamp').only('timestamp').first()
                     self.earliest_timestamp = earliest_je.timestamp if earliest_je else None
                 except ObjectDoesNotExist:
@@ -475,6 +476,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   **kwargs)
 
     def post_journal_entries(self, commit: bool = True):
+        # noinspection PyUnresolvedReferences
         je_model_qs = self.journal_entries.unposted()
         for je_model in je_model_qs:
             je_model.mark_as_posted(raise_exception=False, commit=False)
@@ -540,6 +542,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
                                   **kwargs)
 
     def lock_journal_entries(self, commit: bool = True):
+        # noinspection PyUnresolvedReferences
         je_model_qs = self.journal_entries.unlocked()
         for je_model in je_model_qs:
             je_model.mark_as_locked(raise_exception=False, commit=False)
@@ -622,6 +625,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
 
         # checks if ledger model has journal entries in a closed period...
         if self.entity.has_closing_entry():
+            # noinspection PyUnresolvedReferences
             earliest_je_timestamp = self.journal_entries.posted().order_by('-timestamp').values('timestamp').first()
             if earliest_je_timestamp is not None:
                 earliest_date = earliest_je_timestamp['timestamp'].date()

@@ -249,6 +249,7 @@ class BalanceSheetIOMiddleware:
 
             for bs_role, bs_role_data in bs_context.items():
                 for acc_role, role_data in bs_role_data['roles'].items():
+                    # noinspection PyTypeChecker
                     role_data['total_balance'] = sum(a['balance'] for a in role_data['accounts'])
                     role_data['role_name'] = roles_module.ACCOUNT_LIST_ROLE_VERBOSE[acc_role]
 

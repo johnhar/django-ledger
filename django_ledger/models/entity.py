@@ -461,6 +461,7 @@ class EntityModelClosingEntryMixIn:
         else:
             self.validate_closing_entry_model(closing_entry_model, closing_date=to_date)
 
+        # noinspection PyUnresolvedReferences
         io_digest: IODigestContextManager = self.digest(
             user_model=user_model,
             to_date=to_date,
@@ -582,6 +583,7 @@ class EntityModelClosingEntryMixIn:
     def get_closing_entry_cache_key_for_fiscal_year(self, fiscal_year: int) -> str:
         end_dt: date = getattr(self, 'get_fy_end')(year=fiscal_year)
         end_dt_str = end_dt.strftime('%Y%m%d')
+        # noinspection PyUnresolvedReferences
         return f'closing_entry_{end_dt_str}_{self.uuid}'
 
     # ----> Closing Entry Caching Month < -----

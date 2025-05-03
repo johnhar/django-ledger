@@ -270,6 +270,12 @@ class AccrualMixIn(models.Model):
         """
         return self.ledger.posted
 
+    def is_paid(self) -> bool:
+        raise NotImplementedError('Subclasses must implement this method.')
+
+    def is_void(self) -> bool:
+        raise NotImplementedError('Subclasses must implement this method.')
+
     # OTHERS...
     def get_progress(self) -> Decimal:
         """

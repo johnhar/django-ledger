@@ -66,6 +66,7 @@ class TransactionModelFormSet(BaseModelFormSet):
         if any(self.errors):
             return
         for form in self.forms:
+            # noinspection PyUnresolvedReferences
             if self.can_delete and self._should_delete_form(form):
                 continue
         txs_balances = [{

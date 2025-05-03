@@ -21,6 +21,7 @@ from django_ledger.views.mixins import DjangoLedgerSecurityMixIn
 class BankAccountModelModelBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             entity_model: EntityModel = self.get_authorized_entity_instance()

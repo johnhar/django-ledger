@@ -715,11 +715,14 @@ class IODatabaseMixIn:
         # get_initial txs_queryset... where the IO model is operating from??...
         if self.is_entity_model():
             if entity_slug:
+                # noinspection PyUnresolvedReferences
                 if entity_slug != self.slug:
+                    # noinspection PyUnresolvedReferences
                     raise IOValidationError('Inconsistent entity_slug. '
                                             f'Provided {entity_slug} does not match actual {self.slug}')
             if unit_slug:
 
+                # noinspection PyUnresolvedReferences
                 txs_queryset_init = TransactionModel.objects.for_entity(
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
@@ -1377,6 +1380,7 @@ class IODatabaseMixIn:
                     )
 
         if self.is_ledger_model():
+            # noinspection PyUnresolvedReferences
             if self.is_locked():
                 raise IOValidationError(
                     message=_('Cannot commit on locked ledger')
@@ -1394,6 +1398,7 @@ class IODatabaseMixIn:
             isinstance(self, lazy_loader.get_entity_model()),
             je_ledger_model is not None,
         ]):
+            # noinspection PyUnresolvedReferences
             if je_ledger_model.entity_id != self.uuid:
                 raise IOValidationError(f'LedgerModel {je_ledger_model} does not belong to {self}')
 
@@ -1402,6 +1407,7 @@ class IODatabaseMixIn:
             isinstance(self, lazy_loader.get_entity_model()),
             je_unit_model is not None,
         ]):
+            # noinspection PyUnresolvedReferences
             if je_unit_model.entity_id != self.uuid:
                 raise IOValidationError(f'EntityUnitModel {je_unit_model} does not belong to {self}')
 
@@ -1525,6 +1531,8 @@ class IOReportMixIn:
         IODigestContextManager
             A context manager for handling the digestion process of the balance sheet.
         """
+        # self.digest() is in IODatabaseMixin
+        # noinspection PyUnresolvedReferences
         return self.digest(
             user_model=user_model,
             to_date=to_date,
