@@ -687,6 +687,7 @@ class AccrualMixIn(models.Model):
                 raise TypeError(
                     f'unsupported financial instrument type: {type(self)}. Update AccruralMixIn.migrate_state() method to support this type of financial instrument.')
 
+            # noinspection PyUnreachableCode
             item_data_gb = groupby(item_data,
                                    key=lambda a: (a['account_uuid'],
                                                   a['entity_unit__uuid'],

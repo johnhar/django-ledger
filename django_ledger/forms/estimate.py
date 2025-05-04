@@ -142,6 +142,7 @@ class BaseEstimateItemModelFormset(BaseModelFormSet):
             form.fields['item_model'].queryset = items_qs
             form.fields['entity_unit'].queryset = unit_qs
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                # noinspection PyUnboundLocalVariable
                 form.fields['fund'].queryset = fund_qs
 
             if not self.ESTIMATE_MODEL.can_update_items():

@@ -454,12 +454,14 @@ class IODatabaseMixIn:
 
             elif fund_slug:
 
+                # noinspection PyUnresolvedReferences
                 txs_queryset_init = TransactionModel.objects.for_entity(
                     user_model=user_model,
                     entity_slug=entity_slug or self.slug
                 ).for_fund(fund_slug=fund_slug)
 
             else:
+                # noinspection PyUnresolvedReferences
                 txs_queryset_init = TransactionModel.objects.for_entity(
                     user_model=user_model,
                     entity_slug=self
@@ -469,6 +471,7 @@ class IODatabaseMixIn:
                 raise IOValidationError(
                     'Calling digest from Entity Unit requires entity_slug explicitly for safety')
 
+            # noinspection PyUnresolvedReferences
             txs_queryset_init = TransactionModel.objects.for_entity(
                 user_model=user_model,
                 entity_slug=entity_slug,
@@ -479,6 +482,7 @@ class IODatabaseMixIn:
                 raise IOValidationError(
                     'Calling digest from Fund Model requires entity_slug explicitly for safety')
 
+            # noinspection PyUnresolvedReferences
             txs_queryset_init = TransactionModel.objects.for_entity(
                 user_model=user_model,
                 entity_slug=entity_slug,
@@ -489,6 +493,7 @@ class IODatabaseMixIn:
                 raise IOValidationError(
                     'Calling digest from Ledger Model requires entity_slug explicitly for safety')
 
+            # noinspection PyUnresolvedReferences
             txs_queryset_init = TransactionModel.objects.for_entity(
                 entity_slug=entity_slug,
                 user_model=user_model,
@@ -545,6 +550,7 @@ class IODatabaseMixIn:
                 # no need to DB aggregate, just use closing entry...
                 io_result.db_from_date = None
                 io_result.db_to_date = None
+                # noinspection PyUnresolvedReferences
                 txs_queryset_agg = TransactionModel.objects.none()
 
             # bounded exact from_date and to_date match...
@@ -562,6 +568,7 @@ class IODatabaseMixIn:
                 # no need to aggregate, use both closing entries...
                 io_result.db_from_date = None
                 io_result.db_to_date = None
+                # noinspection PyUnresolvedReferences
                 txs_queryset_agg = TransactionModel.objects.none()
 
         txs_queryset_closing_entry = txs_queryset_from_closing_entry | txs_queryset_to_closing_entry
@@ -1195,6 +1202,7 @@ class IODatabaseMixIn:
             isinstance(self, lazy_loader.get_entity_model()),
             je_fund_model is not None,
         ]):
+            # noinspection PyUnresolvedReferences
             if je_fund_model.entity_id != self.uuid:
                 raise IOValidationError(f'FundModel {je_fund_model} does not belong to {self}')
 
@@ -1204,10 +1212,10 @@ class IODatabaseMixIn:
         if force_je_retrieval:
             try:
                 if isinstance(je_timestamp, (datetime, str)):
-                    # noinspection PyUnusedLocal
+                    # noinspection PyUnresolvedReferences
                     je_model = je_ledger_model.journal_entries.get(timestamp__exact=je_timestamp)
                 elif isinstance(je_timestamp, date):
-                    # noinspection PyUnusedLocal
+                    # noinspection PyUnresolvedReferences
                     je_model = je_ledger_model.journal_entries.get(timestamp__date__exact=je_timestamp)
                 else:
                     raise IOValidationError(message=_(f'Invalid timestamp type {type(je_timestamp)}'))
@@ -1245,6 +1253,7 @@ class IODatabaseMixIn:
             if staged_tx_model:
                 staged_tx_model.transaction_model = tx
 
+        # noinspection PyUnresolvedReferences
         txs_models = TransactionModel.objects.bulk_create(i[0] for i in txs_models)
         je_model.save(verify=True, post_on_verify=je_posted)
         return je_model, txs_models

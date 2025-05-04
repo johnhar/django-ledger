@@ -400,12 +400,14 @@ class FundMixIn:
     FUND_SLUG_KWARG = 'fund_slug'
     FUND_SLUG_QUERY_PARAM = 'fund'
 
+    # noinspection PyUnresolvedReferences
     def get_fund_slug(self):
         fund_slug = self.kwargs.get(self.FUND_SLUG_KWARG)
         if not fund_slug:
             fund_slug = self.request.GET.get(self.FUND_SLUG_QUERY_PARAM)
         return fund_slug
 
+    # noinspection PyUnresolvedReferences
     def get_context_data(self, **kwargs):
         context = super(FundMixIn, self).get_context_data(**kwargs)
         fund_slug = self.get_fund_slug()

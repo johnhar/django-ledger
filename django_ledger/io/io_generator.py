@@ -29,7 +29,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ledger.io.utils import get_localtime, get_localdate
 from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
-from django_ledger.io.io_core import get_localtime, get_localdate
+from django_ledger.io.utils import get_localtime, get_localdate
 from django_ledger.io.roles import (INCOME_OPERATIONAL, ASSET_CA_INVENTORY, COGS, ASSET_CA_CASH, ASSET_CA_PREPAID,
                                     LIABILITY_CL_DEFERRED_REVENUE, EXPENSE_OPERATIONAL, EQUITY_CAPITAL,
                                     ASSET_CA_RECEIVABLES, LIABILITY_CL_ACC_PAYABLE)

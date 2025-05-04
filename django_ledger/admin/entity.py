@@ -143,6 +143,7 @@ class EntityModelAdmin(ModelAdmin):
         EntityManagementInLine
     ]
     if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        # noinspection PyTypeChecker
         inlines.insert(2, FundModelInLine)      # place after entity unit
 
     actions = [

@@ -1,5 +1,5 @@
 from django_ledger.io import roles
-from django_ledger.models import EntityModelValidationError, ChartOfAccountModel, coa_default
+from django_ledger.models import coa_default
 from django_ledger.models.coa_default import DEFAULT_CHART_OF_ACCOUNTS
 from django_ledger.tests.base import DjangoLedgerBaseTest
 

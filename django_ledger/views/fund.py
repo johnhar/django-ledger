@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, RedirectView
 
 from django_ledger.forms.fund import FundModelCreateForm, FundModelUpdateForm
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models import FundModel, EntityModel
 from django_ledger.views.financial_statement import FiscalYearIncomeStatementView
 from django_ledger.views.mixins import (DjangoLedgerSecurityMixIn, QuarterlyReportMixIn, MonthlyReportMixIn,
@@ -22,6 +22,7 @@ from django_ledger.views.mixins import (DjangoLedgerSecurityMixIn, QuarterlyRepo
 class FundModelModelBaseView(DjangoLedgerSecurityMixIn):
     queryset = None
 
+    # noinspection PyUnresolvedReferences
     def get_queryset(self):
         if self.queryset is None:
             self.queryset = FundModel.objects.for_entity(

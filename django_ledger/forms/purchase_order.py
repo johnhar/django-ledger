@@ -181,6 +181,7 @@ class BasePurchaseOrderItemFormset(BaseModelFormSet):
             form.fields['item_model'].queryset = items_qs
             form.fields['entity_unit'].queryset = unit_qs
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                # noinspection PyUnboundLocalVariable
                 form.fields['fund'].queryset = fund_qs
             if not self.PO_MODEL.can_edit_items():
                 form.fields['po_unit_cost'].disabled = True
