@@ -30,7 +30,7 @@ from django_ledger.forms.bill import (
     AccruedAndApprovedBillModelUpdateForm,
     PaidBillModelUpdateForm
 )
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models import EntityModel, PurchaseOrderModel, EstimateModel, BillModelQuerySet
 from django_ledger.models.bill import BillModel
 from django_ledger.views.mixins import DjangoLedgerSecurityMixIn

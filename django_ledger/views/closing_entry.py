@@ -20,7 +20,7 @@ from django.views.generic import (
 from django.views.generic.detail import SingleObjectMixin
 
 from django_ledger.forms.closing_entry import ClosingEntryCreateForm, ClosingEntryUpdateForm
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models.closing_entry import ClosingEntryModel
 from django_ledger.models.entity import EntityModel
 from django_ledger.views import DjangoLedgerSecurityMixIn

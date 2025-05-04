@@ -12,7 +12,7 @@ from django_ledger.forms.transactions import (
     TransactionModelForm,
     TransactionModelFormSet
 )
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models import (
     TransactionModel, EntityModel, AccountModel, LedgerModel, JournalEntryModel,
     TransactionModelValidationError, JournalEntryValidationError

@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.utils.dateparse import parse_date
 
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 
 UserModel = get_user_model()
 

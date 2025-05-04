@@ -29,7 +29,7 @@ from django.db.models import Q, QuerySet, Manager, F
 from django.db.models.signals import pre_save
 from django.utils.translation import gettext_lazy as _
 
-from django_ledger.io.io_core import validate_io_timestamp
+from django_ledger.io.utils import validate_io_timestamp
 from django_ledger.models import AccountModel, BillModel, EntityModel, InvoiceModel, LedgerModel
 from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.unit import EntityUnitModel

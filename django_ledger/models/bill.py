@@ -30,7 +30,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io import ASSET_CA_CASH, ASSET_CA_PREPAID, LIABILITY_CL_ACC_PAYABLE
-from django_ledger.io.io_core import get_localtime, get_localdate
+from django_ledger.io.utils import get_localtime, get_localdate
 from django_ledger.models.entity import EntityModel, EntityStateModel
 from django_ledger.models.items import ItemTransactionModelQuerySet, ItemTransactionModel, ItemModel, ItemModelQuerySet
 from django_ledger.models.mixins import (

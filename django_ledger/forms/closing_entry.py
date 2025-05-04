@@ -1,7 +1,7 @@
 from django.forms import DateInput, ValidationError, ModelForm, Textarea
 from django.utils.translation import gettext_lazy as _
 
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models.closing_entry import ClosingEntryModel
 from django_ledger.settings import DJANGO_LEDGER_FORM_INPUT_CLASSES
 
