@@ -21,7 +21,7 @@ from django_ledger.forms.invoice import (BaseInvoiceModelUpdateForm, InvoiceMode
                                          DraftInvoiceModelUpdateForm, InReviewInvoiceModelUpdateForm,
                                          ApprovedInvoiceModelUpdateForm, PaidInvoiceModelUpdateForm,
                                          AccruedAndApprovedInvoiceModelUpdateForm, InvoiceModelCreateForm)
-from django_ledger.io.io_core import get_localdate
+from django_ledger.io.utils import get_localdate
 from django_ledger.models import EntityModel, LedgerModel, EstimateModel
 from django_ledger.models.invoice import InvoiceModel
 from django_ledger.views.mixins import DjangoLedgerSecurityMixIn

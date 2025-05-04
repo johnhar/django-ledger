@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from markdown import markdown
 
 from django_ledger.io import ASSET_CA_CASH, LIABILITY_CL_ST_NOTES_PAYABLE, LIABILITY_LTL_MORTGAGE_PAYABLE
-from django_ledger.io.io_core import validate_io_timestamp, check_tx_balance, get_localtime, get_localdate
+from django_ledger.io.utils import validate_io_timestamp, get_localtime, get_localdate, check_tx_balance
 from django_ledger.models.utils import lazy_loader
 from django_ledger.settings import DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 

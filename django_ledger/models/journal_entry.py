@@ -47,7 +47,7 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io import roles
-from django_ledger.io.io_core import get_localtime
+from django_ledger.io.utils import get_localtime
 from django_ledger.io.roles import (
     ASSET_CA_CASH, GROUP_CFS_FIN_DIVIDENDS, GROUP_CFS_FIN_ISSUING_EQUITY,
     GROUP_CFS_FIN_LT_DEBT_PAYMENTS, GROUP_CFS_FIN_ST_DEBT_PAYMENTS,

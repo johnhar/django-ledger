@@ -41,7 +41,8 @@ from django.utils.translation import gettext_lazy as _
 from treebeard.mp_tree import MP_Node, MP_NodeManager, MP_NodeQuerySet
 
 from django_ledger.io import roles as roles_module, validate_roles, IODigestContextManager
-from django_ledger.io.io_core import IOMixIn, get_localtime, get_localdate
+from django_ledger.io.io_core import IOMixIn
+from django_ledger.io.utils import get_localtime, get_localdate
 from django_ledger.models.fund import FundModel
 from django_ledger.models.accounts import AccountModel, AccountModelQuerySet, DEBIT, CREDIT
 from django_ledger.models.bank_account import BankAccountModelQuerySet, BankAccountModel

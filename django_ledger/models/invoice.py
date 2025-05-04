@@ -32,7 +32,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io import ASSET_CA_CASH, ASSET_CA_RECEIVABLES, LIABILITY_CL_DEFERRED_REVENUE
-from django_ledger.io.io_core import get_localtime, get_localdate
+from django_ledger.io.utils import get_localtime, get_localdate
 from django_ledger.models import (
     lazy_loader, ItemTransactionModelQuerySet,
     ItemModelQuerySet, ItemModel, QuerySet, Manager, ItemTransactionModel
