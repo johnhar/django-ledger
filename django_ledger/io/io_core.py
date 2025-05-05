@@ -114,8 +114,6 @@ from django_ledger.io.io_middleware import (
 )
 from django_ledger.io.ratios import FinancialRatioManager
 from django_ledger.io.utils import validate_io_timestamp, validate_activity, check_tx_balance
-from django_ledger.models.journal_entry import JournalEntryModelAbstract
-from django_ledger.models.transactions import TransactionModelAbstract
 from django_ledger.models.utils import lazy_loader
 from django_ledger.settings import DJANGO_LEDGER_PDF_SUPPORT_ENABLED, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
@@ -306,7 +304,8 @@ class IODatabaseMixIn:
             message=_(f'IODatabaseMixIn not compatible with {self.__class__.__name__} model.')
         )
 
-    def get_transaction_model(self) -> type[TransactionModelAbstract]:
+    # noinspection PyUnresolvedReferences
+    def get_transaction_model(self) -> type['TransactionModelAbstract']:
         """
         Retrieve the transaction model class used for handling transactions.
 
@@ -325,7 +324,8 @@ class IODatabaseMixIn:
             return self.TRANSACTION_MODEL_CLASS
         return lazy_loader.get_txs_model()
 
-    def get_journal_entry_model(self) -> type[JournalEntryModelAbstract]:
+    # noinspection PyUnresolvedReferences
+    def get_journal_entry_model(self) -> type['JournalEntryModelAbstract']:
         """
         Retrieves the class model for journal entries. If the `JOURNAL_ENTRY_MODEL_CLASS`
         attribute is set, it returns its value. Otherwise, it dynamically loads and
