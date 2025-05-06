@@ -2955,6 +2955,21 @@ class EntityModelAbstract(MP_Node,
         return self.close_entity_books(closing_date=closing_dt, force_update=force_update,
                                        post_closing_entry=post_closing_entry)
 
+    # ### FUND TRANSFER MANAGEMENT ####
+    def get_fund_transfers(self):
+        """
+        Fetches a QuerySet of FundTransferModels associated with the EntityModel instance.
+
+        Returns
+        -------
+        FundTransferModelQuerySet
+        """
+        FundTransferModel = lazy_loader.get_fund_transfer_model()
+        return FundTransferModel.objects.filter(
+            ledger__entity__uuid__exact=self.uuid
+        ).select_related('ledger', 'ledger__entity')
+
+
     # ### RANDOM DATA GENERATION ####
 
     def populate_random_data(self, start_date: date, days_forward=180, tx_quantity: int = 25):
@@ -3229,6 +3244,9 @@ class EntityStateModelAbstract(Model):
         (KEY_INVOICE, _('Invoice')),
         (KEY_ESTIMATE, _('Estimate')),
     ]
+    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        KEY_FUND_TRANSFER = 'ft'
+        KEY_CHOICES.append((KEY_FUND_TRANSFER, _('Fund Transfer')))
 
     uuid = models.UUIDField(default=uuid4, editable=False, primary_key=True)
     entity_model = models.ForeignKey('django_ledger.EntityModel',

@@ -78,8 +78,10 @@ from django_ledger.settings import (
 class JournalEntryValidationError(ValidationError):
     pass
 
+
 T = TypeVar('T', bound='JournalEntry')
 QS = TypeVar('QS', bound='JournalEntryQuerySet')
+
 
 class JournalEntryModelQuerySet(QuerySet[T], Generic[T]):
     """
@@ -345,6 +347,8 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
     fund : FundModel
         A reference to a logical and self-contained structure within the `EntityModel`.
         Provides context for the journal entry. See `FundModel` documentation for details.
+    receiving_fund : FundModel
+        A reference to the fund that receives a transfer from 'fund'.  This field is optional and only used in fund transfers.
     activity : str
         Indicates the nature of the activity associated with the journal entry.
         Must be one of the predefined `ACTIVITIES` (e.g., Operating, Financing, Investing) and is programmatically determined.
@@ -415,6 +419,14 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         null=True,
         verbose_name=_('Associated Fund')
     )
+    receiving_fund = models.ForeignKey(
+        'django_ledger.FundModel',
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        related_name='receiving_fund',
+        verbose_name=_('Receiving Fund')
+    )
     activity = models.CharField(
         choices=ACTIVITIES,
         max_length=20,
@@ -448,6 +460,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             models.Index(fields=['activity']),
             models.Index(fields=['entity_unit']),
             models.Index(fields=['fund']),
+            models.Index(fields=['receiving_fund']),
             models.Index(fields=['locked']),
             models.Index(fields=['posted']),
             models.Index(fields=['je_number']),
@@ -675,6 +688,15 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         """
         return self._verified
 
+    def is_fund_transfer(self) -> bool:
+        """
+        Check if the Journal Entry is a transfer between funds.
+        Returns
+        -------
+            bool: True if the Journal Entry is a fund transfer, otherwise False.
+        """
+        return self.receiving_fund is not None
+
     def is_balance_valid(self, txs_qs: TransactionModelQuerySet, raise_exception: bool = True) -> bool:
         """
         Validates whether the DEBITs and CREDITs of the transactions balance correctly.
@@ -749,6 +771,42 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             raise JournalEntryValidationError(
                 f'Invalid TransactionModelQuerySet. All transactions must be associated with Journal Entry {self.uuid}.'
             )
+        return is_valid
+
+    def is_fund_transfer_txs_valid(self, txs_qs: TransactionModelQuerySet, raise_exception: bool = True) -> bool:
+        """
+        Validates whether, assuming this is a fund transfer journal entry, that the transactions are valid.
+        This assumes it has already been verified that that the journal entry is a fund transfer and that
+        the transactions belong to this journal entry
+
+        Parameters
+        ----------
+            txs_qs (TransactionModelQuerySet): A QuerySet containing transactions to validate.
+            raise_exception (bool): Whether to raise a JournalEntryValidationError if the validation fails.
+
+        Returns
+        -------
+            bool: True if all transactions belong to the Journal Entry, otherwise False.
+
+        Raises
+        ------
+            JournalEntryValidationError: If validation fails and raise_exception is True.
+        """
+        # check that there are only 2 transactions: first one is a credit from an asset in the 'fund',
+        # and that the second one is a debit to an asset in the 'receiving fund'
+        if txs_qs.count() != 2:
+            if raise_exception:
+                raise JournalEntryValidationError(f'Must have 2 transactions in {self.uuid}')
+
+        tx1 = txs_qs.first()
+        tx2 = txs_qs.last()
+
+        is_valid = all([tx1.tx_type == CREDIT, tx2.tx_type == DEBIT])
+        if not is_valid and raise_exception:
+            raise JournalEntryValidationError(
+                f'First transaction must be a credit from an asset in the "fund". Second transaction must be a debit to an asset in the "receiving fund".'
+            )
+
         return is_valid
 
     def is_cash_involved(self, txs_qs: Optional[TransactionModelQuerySet] = None) -> bool:
@@ -829,7 +887,26 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 return self.fund.name
             return no_fund_name
         else:
-            raise EnvironmentError(f'Nonprofit features are not enabled. Please enable them before calling this method.')
+            raise EnvironmentError(
+                f'Nonprofit features are not enabled. Please enable them before calling this method.')
+
+    def get_receiving_fund_name(self, no_fund_name: str = "") -> str:
+        """
+        Retrieves the name of the receiving fund associated with the Journal Entry.
+
+        Parameters:
+            no_fund_name (str): The fallback name to return if no fund is associated.
+
+        Returns:
+            str: The name of the fund, or the fallback provided.
+        """
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            if self.receiving_fund_id:
+                return self.receiving_fund.name
+            return no_fund_name
+        else:
+            raise EnvironmentError(
+                f'Nonprofit features are not enabled. Please enable them before calling this method.')
 
     def get_entity_last_closing_date(self) -> Optional[date]:
         """
@@ -1338,6 +1415,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             }
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
                 LOOKUP['fund_id__exact'] = self.fund_id
+                # TODO JJH determine if we need to include the receiving fund in the lookup
 
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
@@ -1357,6 +1435,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             }
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
                 LOOKUP['fund_id'] = self.fund_id
+                # TODO JJH determine if we need to include the receiving fund in the lookup
 
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
@@ -1403,15 +1482,15 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                     state_model = self._get_next_state_model(raise_exception=False)
 
                 unit_prefix = self.entity_unit.document_prefix if self.entity_unit_id else DJANGO_LEDGER_JE_NUMBER_NO_UNIT_PREFIX
+                seq = str(state_model.sequence).zfill(DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING)
 
                 if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                    fund_prefix = self.fund.document_prefix if self.fund_id else DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
-
-                seq = str(state_model.sequence).zfill(DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING)
-                if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                    self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
-                else:
+                    # if this is a fund transfer, use a fixed prefix, else determine the fund prefix like the unit's prefix
+                    fund_prefix = 'TFR' if self.receiving_fund_id else \
+                        self.fund.document_prefix if self.fund_id else DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
                     self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{fund_prefix}-{seq}'
+                else:
+                    self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
 
                 if commit:
                     self.save(update_fields=['je_number'])
@@ -1481,15 +1560,27 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             #     if raise_exception:
             #         raise JournalEntryValidationError('At least two transactions required.')
 
+            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+                # every journal entry must have a fund associated with it, and if it's a fund transfer,
+                # be a valid fund transfer
+                is_fund_valid = self.fund_id is not None
+                if self.is_fund_transfer():
+                    is_fund_valid = is_fund_valid and \
+                                    self.is_fund_transfer_txs_valid(txs_qs=txs_qs, raise_exception=raise_exception)
+            else:
+                is_fund_valid = True
+
             if all([
                 is_balance_valid,
                 is_txs_qs_valid,
-                is_coa_valid
+                is_coa_valid,
+                is_fund_valid
             ]):
                 # activity flag...
                 self.generate_activity(txs_qs=txs_qs, raise_exception=raise_exception)
                 self._verified = True
                 return txs_qs, self.is_verified()
+
         return self.get_transaction_queryset(), self.is_verified()
 
     def clean(self,

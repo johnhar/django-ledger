@@ -307,6 +307,7 @@ class LedgerModelAbstract(CreateUpdateMixIn, IOMixIn):
         return {
             lazy_loader.get_bill_model(): 'billmodel',
             lazy_loader.get_invoice_model(): 'invoicemodel',
+            lazy_loader.get_fund_transfer_model(): 'fundtransfermodel',
         }
 
     def get_wrapped_model_instance(self):

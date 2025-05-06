@@ -7,6 +7,7 @@ from django_ledger.models.items import *
 from django_ledger.models.accounts import *
 from django_ledger.models.ledger import *
 from django_ledger.models.fund import *
+from django_ledger.models.fund_transfer import *
 from django_ledger.models.transactions import *
 from django_ledger.models.journal_entry import *
 from django_ledger.models.customer import *

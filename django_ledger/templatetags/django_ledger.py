@@ -360,6 +360,13 @@ def account_txs_table(context, txs_qs):
     }
     return result
 
+@register.inclusion_tag('django_ledger/fund_transfers/tags/fund_transfer_table.html', takes_context=True)
+def fund_transfer_table(context, fund_transfer_qs):
+    return {
+        'fund_transfers': fund_transfer_qs,
+        'entity_slug': context['view'].kwargs['entity_slug']
+    }
+
 
 @register.inclusion_tag('django_ledger/components/breadcrumbs.html', takes_context=True)
 def nav_breadcrumbs(context):
@@ -803,17 +810,28 @@ def navigation_menu(context, style):
             }
         ]
 
-        # only add the 'Funds' section if fund accounting is enabled for this entity
+        # only add the 'Funds' and 'Fund Transfers' sections if fund accounting is enabled for this entity
         if settings.DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
             entity = EntityModel.objects.filter(slug=ENTITY_SLUG).first()
             if entity and entity.is_nonprofit:
                 your_lists_section: dict = next(
-                    (section for section in nav_menu_links if section.get('title') == 'Your Lists'), None)
+                    (section for section in nav_menu_links if section.get('title') == 'Your Lists'), None
+                )
                 if your_lists_section:
                     your_lists_section['links'].insert(0, {
                         'type': 'link',
                         'title': 'Funds',
                         'url': reverse('django_ledger:fund-list', kwargs={'entity_slug': ENTITY_SLUG})
+                    })
+
+                management_section: dict = next(
+                    (section for section in nav_menu_links if section.get('title') == 'Management'), None
+                )
+                if management_section:
+                    management_section['links'].append({
+                        'type': 'link',
+                        'title': 'Fund Transfers',
+                        'url': reverse('django_ledger:fund-transfer-list', kwargs={'entity_slug': ENTITY_SLUG})
                     })
 
         ctx['links'] = nav_menu_links

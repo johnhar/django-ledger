@@ -1,0 +1,56 @@
+{% load django_ledger %}
+{% load i18n %}
+
+<div class="table-container">
+
+    <table class="table is-fullwidth is-narrow is-striped is-bordered django-ledger-table-bottom-margin-75">
+        <thead>
+        <tr>
+            <th>{% trans 'Number' %}</th>
+            <th>{% trans 'Transfer Date' %}</th>
+            <th>{% trans 'From Fund' %}</th>
+            <th>{% trans 'From Account' %}</th>
+            <th>{% trans 'To Fund' %}</th>
+            <th>{% trans 'To Account' %}</th>
+            <th>{% trans 'Amount' %}</th>
+            <th>{% trans 'Comment' %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for fund_transfer in fund_transfers %}
+            <tr id="{{ fund_transfer.get_html_id }}">
+                <td>{{ fund_transfer.fund_transfer_number }}</td>
+                <td>{{ fund_transfer.transfer_date }}</td>
+                <td>{{ fund_transfer.from_fund }}</td>
+                <td>{{ fund_transfer.from_account }}</td>
+                <td>{{ fund_transfer.to_fund }}</td>
+                <td>{{ fund_transfer.to_account }}</td>
+                <td id="{{ fund_transfer.amount }}">
+                    {% currency_symbol %}{{ fund_transfer.amount | currency_format }}</td>
+                <td>{{ fund_transfer.comment }}</td>
+                <td class="has-text-centered">
+                    <div class="dropdown is-right is-hoverable" id="fund_transfer-action-{{ fund_transfer.uuid }}">
+                        <div class="dropdown-trigger">
+                            <button class="button is-small is-rounded is-outlined is-dark"
+                                    aria-haspopup="true"
+                                    aria-controls="dropdown-menu">
+                                <span>Actions</span>
+                                <span class="icon is-small">{% icon 'bi:arrow-down' 24 %}</span>
+                            </button>
+                        </div>
+                        <div class="dropdown-menu" id="dropdown-menu-{{ fund_transfer.uuid }}" role="menu">
+                            <div class="dropdown-content">
+                                <a href="{% url 'django_ledger:fund-transfer-detail' entity_slug=entity_slug fund_transfer_pk=fund_transfer.uuid %}"
+                                   class="dropdown-item has-text-success">Details</a>
+                                <a href="{% url 'django_ledger:fund-transfer-update' entity_slug=entity_slug fund_transfer_pk=fund_transfer.uuid %}"
+                                   class="dropdown-item has-text-warning-dark">Update</a>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>

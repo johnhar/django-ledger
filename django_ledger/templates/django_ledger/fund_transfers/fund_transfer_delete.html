@@ -1,0 +1,37 @@
+{% extends 'django_ledger/layouts/content_layout_1.html' %}
+{% load i18n %}
+{% load static %}
+{% load django_ledger %}
+
+{% block view_content %}
+    <div class="columns is-centered">
+        <div class="column is-6">
+            <form action="{{ form_action_url }}"
+                  method="post">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-content has-text-centered">
+                        <p class="title has-text-weight-light">Are you sure you want to delete
+                            Fund Transfer {{ fund_transfer.fund_transfer_number }}</p>
+                    </div>
+                    <div class="card-content has-text-centered">
+                        <p class="subtitle">If you want to void the fund transfer instead, click <a
+                                    href="{% url 'django_ledger:fund-transfer-void' entity_slug=view.kwargs.entity_slug fund_transfer_pk=fund_transfer.uuid %}">
+                                here
+                            </a>
+                        </p>
+                    </div>
+                    <div class="card-content has-text-centered">
+                        <button type="submit" class="button is-danger">{% trans 'Delete' %}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+
+
+

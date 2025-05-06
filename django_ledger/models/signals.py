@@ -53,3 +53,7 @@ estimate_status_approved = Signal()
 estimate_status_completed = Signal()
 estimate_status_canceled = Signal()
 estimate_status_void = Signal()
+
+# Fund Transfer Signals...
+fund_transfer_status_created = Signal()
+fund_transfer_status_void = Signal()

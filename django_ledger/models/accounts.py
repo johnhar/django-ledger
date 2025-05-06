@@ -304,6 +304,23 @@ class AccountModelQuerySet(MP_NodeQuerySet[T], Generic[T]):
         """
         return self.available().filter(role__in=GROUP_INVOICE)
 
+    def for_fund_transfer(self):
+        """
+        Retrieves available and unlocked AccountModels for a specific EntityModel, specifically for the creation
+        and management of Fund Transfers.
+
+        This method ensures that only relevant accounts are pulled, as defined under the roles in `GROUP_ASSETS`.
+        These roles include: ASSET_CA_CASH, ASSET_CA_RECEIVABLES, and LIABILITY_CL_DEFERRED_REVENUE.
+
+        Returns
+        -------
+        AccountModelQuerySet
+            A QuerySet containing the AccountModels relevant for the specified EntityModel and the roles defined
+            in `GROUP_ASSETS`.
+        """
+        return self.available().filter(role__in=GROUP_ASSETS)
+
+
 
 class AccountModelManager(MP_NodeManager):
     """

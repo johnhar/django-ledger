@@ -1,0 +1,91 @@
+{% extends 'django_ledger/layouts/content_layout_1.html' %}
+{% load i18n %}
+{% load static %}
+{% load django_ledger %}
+
+{% block view_content %}
+  <div class="container">
+    <div class="columns is-multiline">
+      <div class="column is-12">
+        {% include 'django_ledger/fund_transfers/includes/card_fund_transfer.html' with fund_transfer=fund_transfer_model style='fund-transfer-detail' entity_slug=view.kwargs.entity_slug %}
+      </div>
+      <div class="column is-12">
+        <form
+            action="{% url 'django_ledger:fund-transfer-update' entity_slug=view.kwargs.entity_slug fund_transfer_pk=fund_transfer_model.uuid %}"
+            method="post">
+          {% csrf_token %}
+          {{ form }}
+          <button type="submit"
+                  class="button is-primary is-fullwidth djetler_my_1">{% trans 'Save Fund Transfer' %}</button>
+
+          <a href="{% url 'django_ledger:fund-transfer-list' entity_slug=view.kwargs.entity_slug %}"
+             class="button is-small is-info is-fullwidth mt-2">{% trans 'Fund Transfer List' %}</a>
+          <a href="{% url 'django_ledger:entity-dashboard' entity_slug=view.kwargs.entity_slug %}"
+             class="button is-small is-info is-outlined is-fullwidth mt-2">{% trans 'Go To Dashboard' %}</a>
+
+        </form>
+      </div>
+
+      {% if fund_transfer_model.is_configured %}
+        <div class="column is-12">
+          <div class="card">
+            <div class="card-header">
+              <p class="card-header-title">{% trans 'Fund Transfer State' %}</p>
+            </div>
+            <div class="card-body">
+              <div class="card-content">
+                <div class="columns is-multiline">
+                  <div class="column is-12">
+                    <h3 class="is-size-3">{% trans 'Fund Transfer State' %}</h3>
+                    <p>{{ fund_transfer_model.from_fund }}, {{ fund_transfer_model.from_account }}::
+                      ${{ fund_transfer_model.amount | currency_format }}</p>
+                    <p>{{ fund_transfer_model.to_fund }}, {{ fund_transfer_model.to_account }}
+                      ${{ fund_transfer_model.amount | currency_format }}</p>
+                  </div>
+                  <div class="column is-12">
+                    <h3 class="is-size-3">{% trans 'Ledger State' %}</h3>
+                    <p>{{ fund_transfer_model.from_fund }}, {{ fund_transfer_model.from_account }}::
+                      ${{ fund_transfer_model.amount | currency_format }}</p>
+                    <p>{{ fund_transfer_model.to_fund }}, {{ fund_transfer_model.to_account }}
+                      ${{ fund_transfer_model.amount | currency_format }}</p>
+                  </div>
+                  {% now "Y" as current_year %}
+                  {% now "m" as current_month %}
+                  <div class="column is-6">
+                    <a class="button is-outlined is-small is-primary is-fullwidth"
+                       href="{% url 'django_ledger:ledger-bs-month' ledger_pk=fund_transfer_model.ledger.uuid entity_slug=view.kwargs.entity_slug year=current_year month=current_month %}">
+                      {% trans 'Balance Sheet' %}</a>
+                  </div>
+                  <div class="column is-6">
+                    <a class="button is-outlined is-small is-info is-fullwidth"
+                       href="{% url 'django_ledger:ledger-ic-month' ledger_pk=fund_transfer_model.ledger.uuid entity_slug=view.kwargs.entity_slug year=current_year month=current_month %}">
+                      {% trans 'Income Statement' %}</a>
+                  </div>
+                  <div class="column is-12">
+                    <a class="button is-small is-warning is-fullwidth"
+                       href="{% url 'django_ledger:ledger-update' ledger_pk=fund_transfer_model.ledger.uuid entity_slug=view.kwargs.entity_slug %}">
+                      {% trans 'Fund Transfer Ledger' %}
+                    </a>
+                    <a class="button is-small is-info is-fullwidth mt-2"
+                       href="{% url 'django_ledger:je-list' ledger_pk=fund_transfer_model.ledger.uuid entity_slug=view.kwargs.entity_slug %}">
+                      {% trans 'Ledger Journal Entries' %}
+                    </a>
+                    <a href="{% url "django_ledger:fund-transfer-action-lock-ledger" entity_slug=view.kwargs.entity_slug fund_transfer_pk=fund_transfer_model.uuid %}"
+                       class="button is-small is-success is-fullwidth mt-2">{% trans 'Lock Ledger' %}</a>
+                    <a href="{% url "django_ledger:fund-transfer-action-unlock-ledger" entity_slug=view.kwargs.entity_slug fund_transfer_pk=fund_transfer_model.uuid %}"
+                       class="button is-small is-danger is-fullwidth mt-2">{% trans 'Unlock Ledger' %}</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        DEBUG: configure the fund transfer
+      {% endif %}
+      <div class=" column is-12">
+        {% include 'django_ledger/includes/card_markdown.html' with style='card_1'  title='Fund Transfer Notes' notes_html=fund_transfer.notes_html %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

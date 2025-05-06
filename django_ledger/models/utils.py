@@ -85,6 +85,7 @@ class LazyLoader:
     FUND_MODEL = 'fundmodel'
     CLOSING_ENTRY_MODEL = 'closingentrymodel'
     CLOSING_ENTRY_TRANSACTION_MODEL = 'closingentrytransactionmodel'
+    FUND_TRANSFER_MODEL = 'fundtransfermodel'
 
     BANK_ACCOUNT_MODEL = 'bankaccountmodel'
     PURCHASE_ORDER_MODEL = 'purchaseordermodel'
@@ -168,6 +169,9 @@ class LazyLoader:
 
     def get_closing_entry_transaction_model(self):
         return self.app_config.get_model(self.CLOSING_ENTRY_TRANSACTION_MODEL)
+
+    def get_fund_transfer_model(self):
+        return self.app_config.get_model('fundtransfermodel')
 
     def get_entity_data_generator(self):
         if not self.ENTITY_DATA_GENERATOR:

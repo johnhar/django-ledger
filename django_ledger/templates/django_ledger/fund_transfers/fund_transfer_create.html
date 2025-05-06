@@ -1,0 +1,38 @@
+{% extends 'django_ledger/layouts/content_layout_1.html' %}
+{% load i18n %}
+{% load static %}
+{% load django_ledger %}
+
+{% block view_content %}
+    <div class="columns is-multiline is-centered">
+        <div class="column is-6-desktop">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-header-title has-text-weight-light is-size-4 is-centered">{% trans 'Create Fund Transfer' %}</h2>
+                </div>
+                <form action="{{ form_action_url }}" method="post" id="djl-fund-transfer-model-create-form-id">
+                    <div class="card-content">
+                        {% csrf_token %}
+                        {{ form }}
+                    </div>
+                
+                    <div class="card-content">
+                        <div class="buttons">
+                            <button type="submit"
+                                    id="djl-fund-transfer-create-button"
+                                    class="button is-primary is-outlined is-fullwidth my-2">{% trans 'Create' %}
+                            </button>
+                            <a href="{% url 'django_ledger:fund-transfer-list' entity_slug=view.kwargs.entity_slug %}"
+                               id="djl-fund-transfer-create-back-button"
+                               class="button is-small is-dark is-fullwidth">{% trans 'Cancel' %}</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+
+

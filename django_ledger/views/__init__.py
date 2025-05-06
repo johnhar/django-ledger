@@ -29,3 +29,4 @@ from django_ledger.views.unit import *
 from django_ledger.views.fund import *
 from django_ledger.views.vendor import *
 from django_ledger.views.closing_entry import *
+from django_ledger.views.fund_transfer import *
