@@ -26,12 +26,15 @@
         </div>
         <div class="card-content has-text-centered">
           <h3 class="is-size-3 has-text-centered has-text-weight-bold has-text-warning">{% trans 'This fund transfer is' %} {{ fund_transfer.get_fund_transfeer_status_display }}</h3>
-          <p class="is-size-3 has-text-dark">{% trans 'Amount Due' %}:
-            <span class="has-text-weight-bold">
-          {% currency_symbol %}{{ fund_transfer.amount | currency_format }}
-        </span>
+          <p class="is-size-3 has-text-dark">{% trans 'Amount' %}:
+            <span class="has-text-weight-bold">{% currency_symbol %}{{ fund_transfer.amount | currency_format }}</span>
           </p>
-          <p class="is-size-3 has-text-dark">{% trans 'Transfer Date' %}:
+          <p class="is-size-3 has-text-dark">{% trans 'From' %}:
+            <span class="has-text-weight-bold">{{ fund_transfer.from_fund.name }}</span>
+          </p>
+          <p class="is-size-3 has-text-dark">{% trans 'To' %}:
+            <span class="has-text-weight-bold">{{ fund_transfer.to_fund.name }}</span>
+          <p class="is-size-3 has-text-dark">{% trans 'Date' %}:
             <span class="has-text-weight-bold">{{ fund_transfer.transfer_date }}</span>
           </p>
         </div>
