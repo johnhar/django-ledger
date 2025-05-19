@@ -111,6 +111,19 @@ class BaseFundTransferModelUpdateForm(FundTransferModelCreateForm):
         }
 
 
+class FundTransferModelUpdateForm(BaseFundTransferModelUpdateForm):
+    class Meta(BaseFundTransferModelUpdateForm.Meta):
+        fields = [
+            'transfer_date',
+            'from_fund',
+            'from_account',
+            'to_fund',
+            'to_account',
+            'amount',
+            'markdown_notes',
+        ]
+
+
 class FundTransferModelConfigureForm(BaseFundTransferModelUpdateForm):
     class Meta(BaseFundTransferModelUpdateForm.Meta):
         fields = [

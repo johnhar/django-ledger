@@ -15,7 +15,7 @@ from django.views.generic.detail import SingleObjectMixin
 
 from django_ledger.forms.fund_transfer import (
     FundTransferModelCreateForm,
-    BaseFundTransferModelUpdateForm, FundTransferModelConfigureForm,
+    BaseFundTransferModelUpdateForm, FundTransferModelConfigureForm, FundTransferModelUpdateForm,
 )
 from django_ledger.io.utils import get_localdate
 from django_ledger.models import EntityModel
@@ -198,7 +198,7 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
         fund_transfer_model: FundTransferModel = self.object
         if not fund_transfer_model.is_configured():
             return FundTransferModelConfigureForm
-        return BaseFundTransferModelUpdateForm
+        return FundTransferModelUpdateForm
 
     def get_context_data(self,
                          *,
@@ -239,7 +239,7 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
     def get_success_url(self):
         entity_slug = self.kwargs['entity_slug']
         fund_transfer_pk = self.kwargs['fund_transfer_pk']
-        return reverse('django_ledger:fund_transfer-detail',
+        return reverse('django_ledger:fund-transfer-detail',
                        kwargs={
                            'entity_slug': entity_slug,
                            'fund_transfer_pk': fund_transfer_pk
@@ -267,7 +267,7 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
     def get(self, request, *args, **kwargs):
         if self.action_update_items:
             return HttpResponseRedirect(
-                redirect_to=reverse('django_ledger:fund_transfer-update',
+                redirect_to=reverse('django_ledger:fund-transfer-update',
                                     kwargs={
                                         'entity_slug': self.kwargs['entity_slug'],
                                         'fund_transfer_pk': self.kwargs['fund_transfer_pk']
