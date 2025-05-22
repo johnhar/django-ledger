@@ -805,14 +805,28 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         tx1 = txs_qs.first()
         tx2 = txs_qs.last()
 
-        is_valid = tx1.tx_type != tx2.tx_type and any([tx1.tx_type == CREDIT, tx2.tx_type == CREDIT]) and \
+        # Check that one is credit and one is debit
+        tx_types_valid = tx1.tx_type != tx2.tx_type and any([tx1.tx_type == CREDIT, tx2.tx_type == CREDIT]) and \
                    any([tx1.tx_type == DEBIT, tx2.tx_type == DEBIT])
-        if not is_valid and raise_exception:
+
+        if not tx_types_valid and raise_exception:
             raise JournalEntryValidationError(
-                f'First transaction must be a credit from an asset in the "fund". Second transaction must be a debit to an asset in the "receiving fund".'
+                f'One transaction must be a credit and one must be a debit in a fund transfer.'
             )
 
-        return is_valid
+        # Get credit and debit transactions
+        credit_tx = tx1 if tx1.tx_type == CREDIT else tx2
+        debit_tx = tx1 if tx1.tx_type == DEBIT else tx2
+
+        # Check that the credit transaction has the source fund and the debit transaction has the receiving fund
+        fund_valid = (credit_tx.fund_id == self.fund_id) and (debit_tx.fund_id == self.receiving_fund_id)
+
+        if not fund_valid and raise_exception:
+            raise JournalEntryValidationError(
+                f'Credit transaction must be from the source fund and debit transaction must be to the receiving fund.'
+            )
+
+        return tx_types_valid and fund_valid
 
     def is_cash_involved(self, txs_qs: Optional[TransactionModelQuerySet] = None) -> bool:
         """
@@ -886,10 +900,55 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
 
         Returns:
             str: The name of the fund, or the fallback provided.
+
+        Deprecated:
+            This method uses the fund field in JournalEntryModel, which is deprecated.
+            In the future, funds will be associated with individual transactions.
+            Use get_transactions_fund_name() instead.
         """
+        import warnings
+        warnings.warn(
+            "The fund field in JournalEntryModel is deprecated. "
+            "In the future, funds will be associated with individual transactions. "
+            "Use get_transactions_fund_name() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
             if self.fund_id:
                 return self.fund.name
+            return no_fund_name
+        else:
+            raise EnvironmentError(
+                f'Nonprofit features are not enabled. Please enable them before calling this method.')
+
+    def get_transactions_fund_name(self, no_fund_name: str = "") -> str:
+        """
+        Retrieves the name of the fund associated with the transactions in this Journal Entry.
+
+        For non-fund-transfer journal entries, all transactions should have the same fund.
+        For fund transfers, this returns the name of the source fund.
+
+        Parameters:
+            no_fund_name (str): The fallback name to return if no fund is associated.
+
+        Returns:
+            str: The name of the fund, or the fallback provided.
+        """
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            txs_qs = self.get_transaction_queryset()
+            if txs_qs.exists():
+                # For fund transfers, get the credit transaction (source fund)
+                if self.is_fund_transfer():
+                    credit_tx = txs_qs.filter(tx_type=CREDIT).first()
+                    if credit_tx and credit_tx.fund_id:
+                        return credit_tx.get_fund_name(no_fund_name)
+                # For regular journal entries, get the first transaction's fund
+                else:
+                    tx = txs_qs.first()
+                    if tx and tx.fund_id:
+                        return tx.get_fund_name(no_fund_name)
             return no_fund_name
         else:
             raise EnvironmentError(
@@ -904,10 +963,50 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
 
         Returns:
             str: The name of the fund, or the fallback provided.
+
+        Deprecated:
+            This method uses the receiving_fund field in JournalEntryModel, which is deprecated.
+            In the future, funds will be associated with individual transactions.
+            Use get_transactions_receiving_fund_name() instead.
         """
+        import warnings
+        warnings.warn(
+            "The receiving_fund field in JournalEntryModel is deprecated. "
+            "In the future, funds will be associated with individual transactions. "
+            "Use get_transactions_receiving_fund_name() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
             if self.receiving_fund_id:
                 return self.receiving_fund.name
+            return no_fund_name
+        else:
+            raise EnvironmentError(
+                f'Nonprofit features are not enabled. Please enable them before calling this method.')
+
+    def get_transactions_receiving_fund_name(self, no_fund_name: str = "") -> str:
+        """
+        Retrieves the name of the receiving fund associated with the transactions in this Journal Entry.
+
+        This method is only relevant for fund transfers. For non-fund-transfer journal entries,
+        it returns the fallback name.
+
+        Parameters:
+            no_fund_name (str): The fallback name to return if no fund is associated.
+
+        Returns:
+            str: The name of the receiving fund, or the fallback provided.
+        """
+        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            if self.is_fund_transfer():
+                txs_qs = self.get_transaction_queryset()
+                if txs_qs.exists():
+                    # For fund transfers, get the debit transaction (receiving fund)
+                    debit_tx = txs_qs.filter(tx_type=DEBIT).first()
+                    if debit_tx and debit_tx.fund_id:
+                        return debit_tx.get_fund_name(no_fund_name)
             return no_fund_name
         else:
             raise EnvironmentError(

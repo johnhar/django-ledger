@@ -656,42 +656,8 @@ class IODatabaseMixIn:
             VALUES += ['journal_entry__entity_unit__uuid', 'journal_entry__entity_unit__name']
 
         if by_fund:
-            # this is more complex because the fund we associate with the transaction depends on whether the
-            # the journal entry is a fund transfer or not
-            # Annotate the fund uuid and name based on whether it's coming from a fund transfer or not
-            ANNOTATE['fund__uuid'] = Case(
-                When(
-                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1
-                    then='journal_entry__fund__uuid'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2
-                    then='journal_entry__fund__uuid'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3
-                    then='journal_entry__receiving_fund__uuid'
-                ),
-                default=None,
-                output_field=UUIDField()
-            )
-            ANNOTATE['fund__name'] = Case(
-                When(
-                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1
-                    then='journal_entry__fund__name'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2
-                    then='journal_entry__fund__name'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3
-                    then='journal_entry__receiving_fund__name'
-                ),
-                default=Value('', output_field=CharField()),
-                output_field=CharField()
-            )
             ORDER_BY.append('fund__uuid')
+            VALUES += ['fund__uuid', 'fund__name']
 
         if by_period:
             ORDER_BY.append('journal_entry__timestamp')

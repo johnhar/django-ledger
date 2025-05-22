@@ -24,7 +24,7 @@
                 <td>{{ tx.description }}</td>
                 <td>{{ tx.journal_entry.entity_unit.name }}</td>
                 {% if is_fund_enabled %}
-                  <td>{{ tx.journal_entry.entity_fund.name }}</td>
+                  <td>{{ tx.fund.name }}</td>
                 {% endif %}
                 <td>
                     <div class="dropdown is-right is-hoverable" id="tx-action-{{ tx.uuid }}">
@@ -62,6 +62,9 @@
             <td></td>
             <td></td>
             <td></td>
+            {% if is_fund_enabled %}
+                <td></td>
+            {% endif %}
         </tr>
     </table>
 </div>

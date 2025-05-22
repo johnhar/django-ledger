@@ -115,6 +115,9 @@ class TransactionModelFormSetTest(DjangoLedgerBaseTest):
             data[f'form-{i}-amount'] = txs.amount
             data[f'form-{i}-description'] = txs.description
             data[f'form-{i}-uuid'] = txs.uuid
+            # Include fund if it exists
+            if hasattr(txs, 'fund') and txs.fund:
+                data[f'form-{i}-fund'] = txs.fund.uuid
         data['form-TOTAL_FORMS'] = len(je_model.transactionmodel_set.all())
         data['form-INITIAL_FORMS'] = len(je_model.transactionmodel_set.all())
         data['form-MAX_NUM_FORMS'] = 20 # can set to anything

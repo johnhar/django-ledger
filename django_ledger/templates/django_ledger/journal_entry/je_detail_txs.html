@@ -1,6 +1,7 @@
 {% extends 'django_ledger/layouts/content_layout_1.html' %}
 {% load i18n %}
 {% load static %}
+{% load django_ledger %}
 
 {% block view_content %}
     <div class="columns is-centered is-multiline">
@@ -19,12 +20,16 @@
                             {{ txs_formset.management_form }}
                         </div>
                         <div class="column is-12">
+                            {% nonprofit_enabled journal_entry.entity_slug as nonprofit_enabled %}
                             <table class="table is-fullwidth is-narrow is-striped is-bordered">
                                 <tr>
                                     <th>Account</th>
                                     <th>TX Type</th>
                                     <th>Amount</th>
                                     <th>Description</th>
+                                    {% if nonprofit_enabled %}
+                                        <th>Fund</th>
+                                    {% endif %}
                                     {% if txs_formset.can_delete %}
                                         <th>Delete</th>
                                     {% endif %}
@@ -40,11 +45,12 @@
                                         <td>{{ f.tx_type }}</td>
                                         <td>{{ f.amount }}</td>
                                         <td>{{ f.description }}</td>
-                                        <td>
-                                            {% if txs_formset.can_delete %}
-                                                {{ f.DELETE }}
-                                            {% endif %}
-                                        </td>
+                                        {% if nonprofit_enabled %}
+                                            <td>{{ f.fund }}</td>
+                                        {% endif %}
+                                        {% if txs_formset.can_delete %}
+                                            <td>{{ f.DELETE }}</td>
+                                        {% endif %}
                                     </tr>
                                 {% endfor %}
 

@@ -20,7 +20,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ledger.io.utils import get_localdate, validate_io_timestamp, get_localtime
 from django_ledger.models import lazy_loader
 from django_ledger.models.entity import EntityModel, EntityStateModel, EntityStateModelAbstract
-from django_ledger.models.mixins import ( CreateUpdateMixIn, MarkdownNotesMixIn, )
+from django_ledger.models.mixins import (CreateUpdateMixIn, MarkdownNotesMixIn, )
 from django_ledger.models.signals import fund_transfer_status_void
 from django_ledger.settings import DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES, \
     DJANGO_LEDGER_FUND_TRANSFER_NUMBER_PREFIX
@@ -537,16 +537,19 @@ class FundTransferModelAbstract(
                         TransactionModel(
                             journal_entry=je,
                             amount=abs(self.amount),
+                            fund=fund_id,
                             tx_type=tx_type,
                             account_id=acc_id,
                             description=self.get_migrate_state_desc()
-                        ) for tx_type, acc_id in [('credit', self.from_account_id), ('debit', self.to_account_id)]
+                        ) for tx_type, fund_id, acc_id in [('credit', self.from_fund_id, self.from_account_id),
+                                                           ('debit', self.to_fund_id, self.to_account_id)]
                     ]
                     TransactionModel.objects.bulk_create(txs_list)
-                else:   # update the existing transaction records
+                else:  # update the existing transaction records
                     txs_list = list(txs_qs)
                     for tx in txs_list:
                         tx.amount = abs(self.amount)
+                        tx.fund_id = self.from_fund_id if tx.tx_type == 'credit' else self.to_fund_id
                         tx.account_id = self.from_account_id if tx.tx_type == 'credit' else self.to_account_id
                     TransactionModel.objects.bulk_update(txs_list, fields=['amount', 'account_id'])
 
@@ -619,7 +622,7 @@ class FundTransferModelAbstract(
         return new_state
 
     # LOCK/UNLOCK Ledger...
-    def lock_ledger(self, commit: bool = False, raise_exception: bool = True):
+    def lock_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
         """
         Convenience method to lock the LedgerModel associated with thea Fund Transfer.
 
@@ -635,9 +638,9 @@ class FundTransferModelAbstract(
             if raise_exception:
                 raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is already locked...')
             return
-        ledger_model.lock(commit, raise_exception=raise_exception)
+        ledger_model.lock(commit, raise_exception=raise_exception, **kwargs)
 
-    def unlock_ledger(self, commit: bool = False, raise_exception: bool = True):
+    def unlock_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
         """
         Convenience method to un-lock the LedgerModel associated with the Fund Transfer.
 
@@ -653,10 +656,10 @@ class FundTransferModelAbstract(
             if raise_exception:
                 raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is already unlocked...')
             return
-        ledger_model.unlock(commit, raise_exception=raise_exception)
+        ledger_model.unlock(commit, raise_exception=raise_exception, **kwargs)
 
     # POST/UNPOST Ledger...
-    def post_ledger(self, commit: bool = False, raise_exception: bool = True):
+    def post_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
         """
         Convenience method to post the LedgerModel associated with the Fund Transfer.
 
@@ -672,9 +675,9 @@ class FundTransferModelAbstract(
             if raise_exception:
                 raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is already posted...')
             return
-        ledger_model.post(commit, raise_exception=raise_exception)
+        ledger_model.post(commit, raise_exception=raise_exception, **kwargs)
 
-    def unpost_ledger(self, commit: bool = False, raise_exception: bool = True):
+    def unpost_ledger(self, commit: bool = False, raise_exception: bool = True, **kwargs):
         """
         Convenience method to un-lock the LedgerModel associated with the Fund Transfer.
 
@@ -690,7 +693,7 @@ class FundTransferModelAbstract(
             if raise_exception:
                 raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is not posted...')
             return
-        ledger_model.post(commit, raise_exception=raise_exception)
+        ledger_model.post(commit, raise_exception=raise_exception, **kwargs)
 
     # VOID Actions...
     def mark_as_void(self,

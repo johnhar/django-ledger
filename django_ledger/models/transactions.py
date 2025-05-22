@@ -155,7 +155,7 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
 
     def for_fund(self, fund_slug: Union[str, FundModel]):
         """
-        Filters transactions based on their associated entity fund.
+        Filters transactions based on their associated fund.
 
         Parameters
         ----------
@@ -166,6 +166,29 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
         -------
         TransactionModelQuerySet
             A QuerySet filtered for transactions linked to the specified fund.
+        """
+        if isinstance(fund_slug, FundModel):
+            return self.filter(fund=fund_slug)
+        return self.filter(fund__slug__exact=fund_slug)
+
+    def for_fund_transfer(self, fund_slug: Union[str, FundModel]):
+        """
+        Filters transactions that are part of fund transfers involving the specified fund.
+
+        This method handles the special case of fund transfers by combining three subsets:
+        - Normal transactions where the fund is directly associated
+        - Fund transfer transactions where the fund is the source (credit transactions)
+        - Fund transfer transactions where the fund is the destination (debit transactions)
+
+        Parameters
+        ----------
+        fund_slug : str or FundModel
+            A string representing the slug of the fund or an `FundModel` instance.
+
+        Returns
+        -------
+        TransactionModelQuerySet
+            A QuerySet filtered for transactions involved in fund transfers with the specified fund.
         """
         # Unlike the other filters, we have a special case for fund transfers.  We combine the three subsets of:
         # - normal transactions (journal_entry.receiving_fund is null)
@@ -353,12 +376,28 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
         return self.filter(journal_entry__ledger__invoicemodel__uuid__exact=invoice_model)
 
     def with_annotated_details(self):
-        return self.annotate(
+        """
+        Annotates the queryset with additional details for display purposes.
+
+        Returns
+        -------
+        TransactionModelQuerySet
+            A queryset with additional annotations for display.
+        """
+        # Annotate with the transaction's fund name and other details
+        annotated_qs = self.annotate(
             entity_unit_name=F('journal_entry__entity_unit__name'),
             account_code=F('account__code'),
             account_name=F('account__name'),
             timestamp=F('journal_entry__timestamp'),
+            # Annotate fund_name - prefer transaction's fund, fall back to journal entry's fund
             fund_name=Case(
+                # First try to use the transaction's fund
+                When(
+                    Q(fund__isnull=False),
+                    then=F('fund__name')
+                ),
+                # For backward compatibility, fall back to the journal entry's fund
                 When(
                     Q(journal_entry__receiving_fund__isnull=True),  # Case 1: No receiving fund
                     then=F('journal_entry__fund__name')  # Use 'journal_entry__fund__name'
@@ -373,8 +412,20 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
                 ),
                 default=Value('', output_field=CharField()),  # Fallback in case no condition matches
                 output_field=CharField(),
+            ),
+            # Annotate receiving_fund_name for fund transfers
+            receiving_fund_name=Case(
+                # For fund transfers, get the receiving fund name
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False),
+                    then=F('journal_entry__receiving_fund__name')
+                ),
+                default=Value('', output_field=CharField()),  # Fallback for non-fund-transfers
+                output_field=CharField(),
             )
         )
+
+        return annotated_qs
 
     def is_cleared(self):
         return self.filter(cleared=True)
@@ -503,6 +554,7 @@ class TransactionModelAbstract(CreateUpdateMixIn):
     - journal_entry (ForeignKey): References the related journal entry from the `django_ledger.JournalEntryModel`.
       This field is not editable and is essential for linking transactions to journal entries.
     - account (ForeignKey): References the associated account from `django_ledger.AccountModel`. Protected from being deleted.
+    - fund (ForeignKey): References the associated fund from `django_ledger.FundModel`. Can be null or blank.
     - amount (DecimalField): Represents the transaction amount, up to 20 digits and 2 decimal places.
       The default value is 0.00, and it enforces a minimum value of 0.
     - description (CharField): Optional field for a brief description of the transaction.
@@ -534,6 +586,13 @@ class TransactionModelAbstract(CreateUpdateMixIn):
         verbose_name=_('Account'),
         help_text=_('Account from Chart of Accounts to be associated with this transaction.'),
         on_delete=models.PROTECT
+    )
+    fund = models.ForeignKey(
+        'django_ledger.FundModel',
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        verbose_name=_('Associated Fund')
     )
     amount = models.DecimalField(
         decimal_places=2,
@@ -567,6 +626,7 @@ class TransactionModelAbstract(CreateUpdateMixIn):
             models.Index(fields=['updated']),
             models.Index(fields=['cleared']),
             models.Index(fields=['reconciled']),
+            models.Index(fields=['fund']),
         ]
 
     def __str__(self):
@@ -593,6 +653,42 @@ class TransactionModelAbstract(CreateUpdateMixIn):
 
     def is_debit(self):
         return self.tx_type == self.DEBIT
+
+    def get_fund_name(self, no_fund_name: str = "") -> str:
+        """
+        Retrieves the name of the fund associated with the Transaction.
+
+        Parameters
+        ----------
+        no_fund_name : str
+            The fallback name to return if no fund is associated.
+
+        Returns
+        -------
+        str
+            The name of the fund, or the fallback provided.
+        """
+        if self.fund_id:
+            return self.fund.name
+        return no_fund_name
+
+    def get_fund_slug(self, no_fund_slug: str = "") -> str:
+        """
+        Retrieves the slug of the fund associated with the Transaction.
+
+        Parameters
+        ----------
+        no_fund_slug : str
+            The fallback slug to return if no fund is associated.
+
+        Returns
+        -------
+        str
+            The slug of the fund, or the fallback provided.
+        """
+        if self.fund_id:
+            return self.fund.slug
+        return no_fund_slug
 
     def is_credit(self):
         return self.tx_type == self.CREDIT

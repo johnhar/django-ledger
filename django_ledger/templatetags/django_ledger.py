@@ -205,22 +205,33 @@ def data_import_job_list_table(context):
 # noinspection PyUnusedLocal
 @register.inclusion_tag('django_ledger/data_import/tags/data_import_job_txs_table.html', takes_context=True)
 def data_import_job_txs_pending(context, staged_txs_formset):
+    import_job_model = staged_txs_formset.IMPORT_JOB_MODEL
+    entity_model = import_job_model.ledger_model.entity_model
+
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    is_fund_enabled = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and entity_model.is_fund_enabled()
+
     return {
-        'entity_slug': staged_txs_formset.IMPORT_JOB_MODEL.entity_slug,
-        'import_job_model': staged_txs_formset.IMPORT_JOB_MODEL,
+        'entity_slug': import_job_model.entity_slug,
+        'import_job_model': import_job_model,
         'staged_txs_formset': staged_txs_formset,
-        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
+        'is_fund_enabled': is_fund_enabled,
     }
 
 
 # noinspection PyUnusedLocal
 @register.inclusion_tag('django_ledger/data_import/tags/data_import_job_txs_imported.html', takes_context=True)
 def data_import_job_txs_imported(context, import_job_model):
+    entity_model = import_job_model.ledger_model.entity_model
+
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    is_fund_enabled = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and entity_model.is_fund_enabled()
+
     return {
         'entity_slug': import_job_model.entity_slug,
         'import_job_model': import_job_model,
         'imported_txs': import_job_model.stagedtransactionmodel_set.all().is_imported(),
-        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
+        'is_fund_enabled': is_fund_enabled,
     }
 
 
@@ -240,8 +251,14 @@ def jes_table(context, journal_entry_qs, next_url=None):
         'ledger_pk': ledger_pk,
         'next_url': next_url
     }
-    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = context['entity_model'].is_fund_enabled()
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    # First try to get entity_model from context
+    entity_model = context.get('entity_model')
+    if not entity_model:
+        # If no entity_model in context, fetch it using entity_slug
+        entity_model = EntityModel.objects.filter(slug=entity_slug).first()
+
+    result['is_fund_enabled'] = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and entity_model and entity_model.is_fund_enabled()
 
     return result
 
@@ -275,8 +292,8 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
         'total_credits': total_credits,
         'object': object_type,
     }
-    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = is_fund_enabled
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    result['is_fund_enabled'] = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and is_fund_enabled
 
     return result
 
@@ -317,10 +334,21 @@ def closing_entry_table(context, closing_entry_qs):
 def closing_entry_txs_table(context, closing_entry_txs_qs):
     ce_txs_list = list(closing_entry_txs_qs)
     ce_txs_list.sort(key=lambda ce_txs: ROLES_ORDER_ALL.index(ce_txs.account_model.role))
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    entity_slug = context['view'].kwargs['entity_slug']
+
+    # First try to get entity_model from context
+    entity_model = context.get('entity_model')
+    if not entity_model:
+        # If no entity_model in context, fetch it using entity_slug
+        entity_model = EntityModel.objects.filter(slug=entity_slug).first()
+
+    is_fund_enabled = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and entity_model and entity_model.is_fund_enabled()
+
     return {
         'ce_txs_list': ce_txs_list,
         'entity_slug': context['view'].kwargs['entity_slug'],
-        'is_fund_enabled': context['entity_model'].is_fund_enabled(),
+        'is_fund_enabled': is_fund_enabled,
     }
 
 
@@ -353,13 +381,25 @@ def vendor_table(context):
 
 @register.inclusion_tag('django_ledger/account/tags/account_txs_table.html', takes_context=True)
 def account_txs_table(context, txs_qs):
+    entity_slug = context['view'].kwargs['entity_slug']
+
+    # Get the entity model from the context or fetch it if needed
+    entity_model = context.get('entity_model')
+    if not entity_model:
+        # Import here to avoid circular imports
+        from django_ledger.models import EntityModel
+        entity_model = EntityModel.objects.get(slug=entity_slug)
+
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    is_fund_enabled = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and entity_model.is_fund_enabled()
+
     result = {
         'transactions': txs_qs,
         'total_credits': sum(tx.amount for tx in txs_qs if tx.tx_type == 'credit'),
         'total_debits': sum(tx.amount for tx in txs_qs if tx.tx_type == 'debit'),
-        'entity_slug': context['view'].kwargs['entity_slug'],
+        'entity_slug': entity_slug,
         'account_pk': context['view'].kwargs['account_pk'],
-        'is_fund_enabled': DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES,
+        'is_fund_enabled': is_fund_enabled,
     }
     return result
 
@@ -506,6 +546,57 @@ def modal_action_v2(context, model, action_url: str, message: str, html_id: str,
         'message': message,
         'html_id': html_id
     }
+
+
+@register.simple_tag(name='nonprofit_enabled', takes_context=True)
+def nonprofit_enabled(context=None, entity_slug=None):
+    """
+    Returns whether nonprofit features are enabled in the Django Ledger settings
+    and the entity has fund accounting enabled.
+
+    This tag is used to conditionally display fund-related fields in templates.
+
+    Parameters
+    ----------
+    context : dict, optional
+        The template context, used to get the entity_slug if not provided directly.
+    entity_slug : str, optional
+        The slug of the entity to check if fund accounting is enabled.
+
+    Returns
+    -------
+    bool
+        True if nonprofit features are enabled and the entity has fund accounting enabled, False otherwise.
+    """
+    # First check if nonprofit features are enabled in settings
+    if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+        return False
+
+    # If entity_slug is provided directly, use it
+    if entity_slug:
+        entity_model = EntityModel.objects.filter(slug=entity_slug).first()
+        if entity_model:
+            return entity_model.is_fund_enabled()
+        return False
+
+    # Try to get entity_slug from context
+    if context:
+        # First try to get entity_model from context
+        entity_model = context.get('entity_model')
+        if entity_model:
+            return entity_model.is_fund_enabled()
+
+        # If no entity_model in context, try to get entity_slug from view kwargs
+        view = context.get('view')
+        if view and hasattr(view, 'kwargs'):
+            entity_slug = view.kwargs.get('entity_slug')
+            if entity_slug:
+                entity_model = EntityModel.objects.filter(slug=entity_slug).first()
+                if entity_model:
+                    return entity_model.is_fund_enabled()
+
+    # If we can't determine the entity model, just return the setting value
+    return DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES
 
 
 @register.simple_tag
@@ -896,8 +987,8 @@ def bill_item_formset_table(context, item_formset):
         'total_amount__sum': context['total_amount__sum'],
         'item_formset': item_formset,
     }
-    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = context['bill_model'].ledger.entity.is_fund_enabled()
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    result['is_fund_enabled'] = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and context['bill_model'].ledger.entity.is_fund_enabled()
 
     return result
 
@@ -909,8 +1000,8 @@ def po_item_formset_table(context, po_model, itemtxs_formset):
         'po_model': po_model,
         'itemtxs_formset': itemtxs_formset,
     }
-    if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = po_model.entity.is_fund_enabled()
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
+    result['is_fund_enabled'] = DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES and po_model.entity.is_fund_enabled()
 
     return result
 
@@ -948,9 +1039,12 @@ def estimate_item_table(context, queryset):
         'ce_model': context['estimate_model'],
         'ce_item_list': queryset,
     }
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
     if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = EntityModel.objects.filter(
-            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
+        entity_model = EntityModel.objects.filter(slug=context['view'].kwargs['entity_slug']).first()
+        result['is_fund_enabled'] = entity_model and entity_model.is_fund_enabled()
+    else:
+        result['is_fund_enabled'] = False
 
     return result
 
@@ -962,9 +1056,12 @@ def po_item_table(context, queryset):
         'po_model': context['po_model'],
         'po_item_list': queryset,
     }
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
     if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = EntityModel.objects.filter(
-            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
+        entity_model = EntityModel.objects.filter(slug=context['view'].kwargs['entity_slug']).first()
+        result['is_fund_enabled'] = entity_model and entity_model.is_fund_enabled()
+    else:
+        result['is_fund_enabled'] = False
 
     return result
 
@@ -977,8 +1074,11 @@ def customer_estimate_item_formset(context, item_formset):
         'ce_cost_estimate__sum': context['ce_cost_estimate__sum'],
         'item_formset': item_formset,
     }
+    # Check both conditions: nonprofit features enabled and entity has fund accounting enabled
     if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-        result['is_fund_enabled'] = EntityModel.objects.filter(
-            slug=context['view'].kwargs['entity_slug']).first().is_fund_enabled()
+        entity_model = EntityModel.objects.filter(slug=context['view'].kwargs['entity_slug']).first()
+        result['is_fund_enabled'] = entity_model and entity_model.is_fund_enabled()
+    else:
+        result['is_fund_enabled'] = False
 
     return result
