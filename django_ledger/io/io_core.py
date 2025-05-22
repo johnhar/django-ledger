@@ -299,7 +299,7 @@ class IODatabaseMixIn:
         elif self.is_entity_unit_model():
             return getattr(self, 'entity')
         elif self.is_fund_model():
-            return getattr(self, 'fund')
+            return getattr(self, 'entity')
         raise IOValidationError(
             message=_(f'IODatabaseMixIn not compatible with {self.__class__.__name__} model.')
         )
