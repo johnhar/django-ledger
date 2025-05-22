@@ -25,7 +25,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Q, QuerySet, Manager, F
+from django.db.models import Q, QuerySet, Manager, F, Case, When, Value, CharField
 from django.db.models.signals import pre_save
 from django.utils.translation import gettext_lazy as _
 
@@ -167,9 +167,26 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
         TransactionModelQuerySet
             A QuerySet filtered for transactions linked to the specified fund.
         """
+        # Unlike the other filters, we have a special case for fund transfers.  We combine the three subsets of:
+        # - normal transactions (journal_entry.receiving_fund is null)
+        # - fund transfer transaction for the source found
+        # - fund transfer transaction for the receiving fund
         if isinstance(fund_slug, FundModel):
-            return self.filter(journal_entry__fund=fund_slug)
-        return self.filter(journal_entry__fund__slug__exact=fund_slug)
+            fund_matches = Q(journal_entry__fund=fund_slug)
+            to_fund_matches = Q(journal_entry__receiving_fund=fund_slug)
+        else:
+            fund_matches = Q(journal_entry__fund__slug__exact=fund_slug)
+            to_fund_matches = Q(journal_entry__receiving_fund__slug__exact=fund_slug)
+
+        # Combine all conditions into a single filter
+        combined_filter = (
+                (Q(journal_entry__receiving_fund__isnull=True) & fund_matches) |  # Case 1
+                (Q(journal_entry__receiving_fund__isnull=False) & fund_matches & Q(tx_type='credit')) |  # Case 2
+                (Q(journal_entry__receiving_fund__isnull=False) & to_fund_matches & Q(tx_type='debit'))  # Case 3
+        )
+
+        # Apply the combined filter to the queryset
+        return self.filter(combined_filter)
 
     def for_activity(self, activity_list: Union[str, List[str], Set[str]]):
         """
@@ -338,11 +355,25 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
     def with_annotated_details(self):
         return self.annotate(
             entity_unit_name=F('journal_entry__entity_unit__name'),
-            fund_name=F('journal_entry__fund__name'),
-            receiving_fund_name=F('journal_entry__receiving_fund__name'),
             account_code=F('account__code'),
             account_name=F('account__name'),
             timestamp=F('journal_entry__timestamp'),
+            fund_name=Case(
+                When(
+                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1: No receiving fund
+                    then=F('journal_entry__fund__name')  # Use 'journal_entry__fund__name'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2: Fund transfer (credit)
+                    then=F('journal_entry__fund__name')  # Use 'journal_entry__fund__name'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3: Fund transfer (debit)
+                    then=F('journal_entry__receiving_fund__name')  # Use 'journal_entry__receiving_fund__name'
+                ),
+                default=Value('', output_field=CharField()),  # Fallback in case no condition matches
+                output_field=CharField(),
+            )
         )
 
     def is_cleared(self):

@@ -97,7 +97,7 @@ from typing import List, Set, Union, Tuple, Optional, Dict
 from django.conf import settings as global_settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Sum, QuerySet, F, DecimalField, When, Case
+from django.db.models import Sum, QuerySet, F, DecimalField, When, Case, Q, UUIDField, CharField, Value
 from django.db.models.functions import TruncMonth
 from django.utils.translation import gettext_lazy as _
 
@@ -656,9 +656,42 @@ class IODatabaseMixIn:
             VALUES += ['journal_entry__entity_unit__uuid', 'journal_entry__entity_unit__name']
 
         if by_fund:
-            ORDER_BY.append('journal_entry__fund__uuid')
-            VALUES += ['journal_entry__fund__uuid', 'journal_entry__fund__name',
-                       'journal_entry__receiving_fund__uuid', 'journal_entry__receiving_fund__name']
+            # this is more complex because the fund we associate with the transaction depends on whether the
+            # the journal entry is a fund transfer or not
+            # Annotate the fund uuid and name based on whether it's coming from a fund transfer or not
+            ANNOTATE['fund__uuid'] = Case(
+                When(
+                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1
+                    then='journal_entry__fund__uuid'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2
+                    then='journal_entry__fund__uuid'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3
+                    then='journal_entry__receiving_fund__uuid'
+                ),
+                default=None,
+                output_field=UUIDField()
+            )
+            ANNOTATE['fund__name'] = Case(
+                When(
+                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1
+                    then='journal_entry__fund__name'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2
+                    then='journal_entry__fund__name'
+                ),
+                When(
+                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3
+                    then='journal_entry__receiving_fund__name'
+                ),
+                default=Value('', output_field=CharField()),
+                output_field=CharField()
+            )
+            ORDER_BY.append('fund__uuid')
 
         if by_period:
             ORDER_BY.append('journal_entry__timestamp')
@@ -779,8 +812,7 @@ class IODatabaseMixIn:
         gb_key = lambda a: (
             a['account__uuid'],
             a.get('journal_entry__entity_unit__uuid') if by_unit else None,
-            a.get('journal_entry__fund__uuid') if by_fund else None,
-            a.get('journal_entry_receiving_fund__uuid') if by_fund else None,
+            a.get('fund__uuid') if by_fund else None,
             a.get('dt_idx').year if by_period else None,
             a.get('dt_idx').month if by_period else None,
             a.get('journal_entry__activity') if by_activity else None,
@@ -865,7 +897,7 @@ class IODatabaseMixIn:
             'unit_uuid': k[1],
             'unit_name': gl[0].get('journal_entry__entity_unit__name'),
             'fund_uuid': k[2],
-            'fund_name': gl[0].get('journal_entry__fund__name'),
+            'fund_name': gl[0].get('fund__name'),
             'activity': gl[0].get('journal_entry__activity'),
             'period_year': k[3],
             'period_month': k[4],
