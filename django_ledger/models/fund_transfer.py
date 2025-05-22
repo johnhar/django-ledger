@@ -17,8 +17,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from django_ledger.io.utils import get_localdate
-from django_ledger.models import lazy_loader, AccrualMixIn
+from django_ledger.io.utils import get_localdate, validate_io_timestamp, get_localtime
+from django_ledger.models import lazy_loader
 from django_ledger.models.entity import EntityModel, EntityStateModel, EntityStateModelAbstract
 from django_ledger.models.mixins import ( CreateUpdateMixIn, MarkdownNotesMixIn, )
 from django_ledger.models.signals import fund_transfer_status_void
@@ -142,8 +142,6 @@ class FundTransferModelAbstract(
            The data is serialized and stored as a JSON document in the Database.
        """
     REL_NAME_PREFIX = 'fund_transfer'
-    IS_DEBIT_BALANCE = False    # TODO JJH verify this is correct
-    ALLOW_MIGRATE = True    # TODO JJH verify this is correct
 
     FUND_TRANSFER_STATUS_CREATED = 'created'
     FUND_TRANSFER_STATUS_VOID = 'void'
@@ -152,13 +150,23 @@ class FundTransferModelAbstract(
         (FUND_TRANSFER_STATUS_CREATED, _('created')),
         (FUND_TRANSFER_STATUS_VOID, _('Void')),
     ]
+    TX_TYPE_MAPPING = {
+        'ci': 'credit',
+        'dd': 'credit',
+        'cd': 'debit',
+        'di': 'debit',
+    }
+
     """
     The different fund transfer status options and their representation in the Database.
     """
 
-
     uuid = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     fund_transfer_number = models.SlugField(max_length=20, verbose_name='Fund Transfer Number', editable=False)
+    fund_transfer_status = models.CharField(max_length=10,
+                                            choices=FUND_TRANSFER_STATUS,
+                                            default=FUND_TRANSFER_STATUS[0][0],
+                                            verbose_name=_('Fund Transfer Status'))
     transfer_date = models.DateField(verbose_name=_('Transfer Date'), help_text=_('Date of the Fund Transfer.'))
     from_fund = models.ForeignKey(
         to='django_ledger.FundModel',
@@ -202,6 +210,7 @@ class FundTransferModelAbstract(
                                   editable=False,
                                   verbose_name=_('Ledger'),
                                   on_delete=models.CASCADE)
+    date_void = models.DateField(null=True, blank=True, verbose_name=_('Void Date'))
 
     class Meta:
         abstract = True
@@ -210,6 +219,8 @@ class FundTransferModelAbstract(
         verbose_name_plural = _('Fund Transfers')
         indexes = [
             models.Index(fields=['fund_transfer_number']),
+            models.Index(fields=['fund_transfer_status']),
+            models.Index(fields=['transfer_date']),
             models.Index(fields=['from_fund']),
             models.Index(fields=['to_fund'])
         ]
@@ -264,6 +275,8 @@ class FundTransferModelAbstract(
             else:
                 raise FundTransferModelValidationError('entity_slug must be an instance of str or EntityModel')
 
+            self.fund_transfer_status = self.FUND_TRANSFER_STATUS_CREATED
+
             LedgerModel = lazy_loader.get_ledger_model()
             ledger_model: LedgerModel = LedgerModel(entity=entity_model, posted=ledger_posted)
             ledger_name = f'Fund Transfer {self.uuid}' if not ledger_name else ledger_name
@@ -288,14 +301,43 @@ class FundTransferModelAbstract(
 
         return self.ledger, self
 
+    def can_migrate(self) -> bool:
+        """
+        Determines if the Fund Transfer can be migrated to the books.
+        Results in additional Database query if 'ledger' field is not pre-fetch on QuerySet.
+
+        Returns
+        -------
+        bool
+            True if can migrate, else False.
+        """
+        if not self.ledger_id:
+            return False
+        je = self.ledger.journal_entries.first()
+        return not all([
+            self.ledger.is_posted(),
+            self.ledger.is_locked(),
+            je.is_locked() if je else True,
+            je.is_posted() if je else True,
+        ])
+
     def can_delete(self) -> bool:
-        return self.is_configured()
+        return any([
+            self.is_configured(),
+            not self.ledger.is_locked(),
+        ])
 
     def can_void(self) -> bool:
-        return self.is_configured()
+        return all([
+            float(self.amount) != 0.0,
+            self.is_configured(),
+        ])
 
     def can_generate_fund_transfer_number(self) -> bool:
-        return self.is_configured()
+        return all([
+            not self.fund_transfer_number,
+            self.is_configured(),
+        ])
 
     def _get_next_state_model(self, raise_exception: bool = True) -> Union[EntityStateModel | None]:
         """
@@ -314,7 +356,7 @@ class FundTransferModelAbstract(
         _EntityStateModel: type[EntityStateModelAbstract] = lazy_loader.get_entity_state_model()
         _EntityModel: EntityModel = lazy_loader.get_entity_model()
         entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
-        fy_key = entity_model.get_fy_for_date(dt=get_localdate())   # TODO JJH verify this is correct
+        fy_key = entity_model.get_fy_for_date(dt=get_localdate())
 
         try:
             LOOKUP = {
@@ -336,7 +378,7 @@ class FundTransferModelAbstract(
         except ObjectDoesNotExist:
             _EntityModel: EntityModel = lazy_loader.get_entity_model()
             entity_model = _EntityModel.objects.get(uuid__exact=self.ledger.entity_id)
-            fy_key = entity_model.get_fy_for_date(dt=get_localdate())   # TODO JJH verify this is correct
+            fy_key = entity_model.get_fy_for_date(dt=get_localdate())
 
             LOOKUP = {
                 'entity_model_id': entity_model.uuid,
@@ -386,7 +428,140 @@ class FundTransferModelAbstract(
         return self.fund_transfer_number
 
     def generate_descriptive_title(self) -> str:
-        return f'Fund Transfer {self.fund_transfer_number}' # TODO JJH fill in the from/to funds e.g.,  | {self.ledger.journal_entries} --> '
+        return f'Fund Transfer {self.fund_transfer_number}'
+
+    def get_transaction_queryset(self, annotated: bool = False):
+        """
+        Fetches the TransactionModelQuerySet associated with the BillModel instance.
+        """
+        TransactionModel = lazy_loader.get_txs_model()
+        transaction_model_qs = TransactionModel.objects.all().for_ledger(ledger_model=self.ledger_id)
+        if annotated:
+            return transaction_model_qs.with_annotated_details()
+        return transaction_model_qs
+
+    def get_tx_type(self,
+                    acc_bal_type: dict,
+                    adjustment_amount: Decimal):
+        """
+        Determines the transaction type associated with an increase/decrease of an account balance of the financial
+        instrument.
+
+        Parameters
+        ----------
+        acc_bal_type:
+            The balance type of the account to be adjusted.
+        adjustment_amount: Decimal
+            The adjustment, whether positive or negative.
+
+        Returns
+        -------
+        str
+            The transaction type of the account adjustment.
+        """
+        acc_bal_type = acc_bal_type[0]
+        d_or_i = 'd' if adjustment_amount < 0.00 else 'i'
+        return self.TX_TYPE_MAPPING[acc_bal_type + d_or_i]
+
+    def get_migrate_state_desc(self) -> str:
+        return f'Fund Transfer {self.fund_transfer_number} adjustment.'
+
+    # noinspection PyUnusedLocal
+    def migrate_state(self,
+                      entity_slug: str,
+                      force_migrate: bool = False,
+                      commit: bool = True,
+                      void: bool = False,
+                      je_timestamp: Optional[Union[str, date, datetime]] = None,
+                      raise_exception: bool = True):
+
+        """
+        Migrates the Fund Transfer financial instrument into the books. The main objective of the migrate_state
+        method is to create/update the JournalEntry and TransactionModels necessary to accurately reflect the
+        fund transfer state in the books.
+
+        Parameters
+        ----------
+        entity_slug: str
+            The EntityModel slug.
+        force_migrate: bool
+            Forces migration of the financial instrument bypassing the can_migrate() check.
+        commit: bool
+            If True the migration will be committed in the database. Defaults to True.
+        void: bool
+            If True, the migration will perform a VOID actions of the financial instrument.
+        je_timestamp: date
+            The JournalEntryModel date to be used for this migration.
+        raise_exception: bool
+            Raises ValidationError if migration is not allowed. Defaults to True.
+
+        Returns
+        -------
+        None
+        """
+
+        if self.can_migrate() or force_migrate:
+            if void:
+                self.amount = Decimal(0.00)
+
+            if commit:
+                JournalEntryModel = lazy_loader.get_journal_entry_model()
+                TransactionModel = lazy_loader.get_txs_model()
+
+                if je_timestamp:
+                    je_timestamp = validate_io_timestamp(dt=je_timestamp)
+                je_timestamp = get_localtime() if not je_timestamp else je_timestamp
+
+                # determine if this is a new fund transfer to be created or an existing transfer to be updated/voided
+                # if new, then create the journal entry before proceeding
+                je = self.ledger.journal_entries.first()
+                if not je:
+                    je = JournalEntryModel(
+                        fund_id=self.from_fund_id,
+                        receiving_fund_id=self.to_fund_id,
+                        timestamp=je_timestamp,
+                        description=self.get_migrate_state_desc(),
+                        origin='create',
+                        ledger_id=self.ledger_id
+                    )
+                    je.save()
+                else:
+                    je.fund_id = self.from_fund_id
+                    je.receiving_fund_id = self.to_fund_id
+                    je.origin = 'update'
+                    je.save(update_fields=['fund_id', 'receiving_fund_id', 'origin'])
+
+                txs_qs = je.get_transaction_queryset()
+                if not txs_qs:
+                    txs_list = [
+                        TransactionModel(
+                            journal_entry=je,
+                            amount=abs(self.amount),
+                            tx_type=tx_type,
+                            account_id=acc_id,
+                            description=self.get_migrate_state_desc()
+                        ) for tx_type, acc_id in [('credit', self.from_account_id), ('debit', self.to_account_id)]
+                    ]
+                    TransactionModel.objects.bulk_create(txs_list)
+                else:   # update the existing transaction records
+                    txs_list = list(txs_qs)
+                    for tx in txs_list:
+                        tx.amount = abs(self.amount)
+                        tx.account_id = self.from_account_id if tx.tx_type == 'credit' else self.to_account_id
+                    TransactionModel.objects.bulk_update(txs_list, fields=['amount', 'account_id'])
+
+                je.clean(verify=True)
+                if je.is_verified():
+                    # usually the journal entry is unlocked and unposted.  But if force_migrate == True,
+                    # such as from mark_as_void(), then we have to check if we can still lock and post
+                    if not je.is_locked():
+                        je.mark_as_locked(commit=False, raise_exception=True)
+                    if not je.is_posted():
+                        je.mark_as_posted(commit=False, verify=False, raise_exception=True)
+                    je.save(update_fields=['posted', 'locked', 'activity'])
+        else:
+            if raise_exception:
+                raise ValidationError(f'{self.REL_NAME_PREFIX.upper()} state migration not allowed')
 
     def void_state(self, commit: bool = False) -> Dict:
         """
@@ -400,7 +575,7 @@ class FundTransferModelAbstract(
         Returns
         -------
         dict
-            A dictionary with new amount_paid, amount_receivable, amount_unearned and amount_earned as keys.
+            A dictionary with new amount as key.
         """
         void_state = {
             'amount': Decimal.from_float(0.00),
@@ -434,8 +609,7 @@ class FundTransferModelAbstract(
         Returns
         -------
         dict
-            A dictionary with new amount_paid, amount_receivable, amount_unearned and amount_earned as keys.
-            Values are Decimal type.
+            A dictionary with new amount as key. Value is Decimal type.
         """
         new_state = {
             'amount': self.amount,
@@ -447,7 +621,7 @@ class FundTransferModelAbstract(
     # LOCK/UNLOCK Ledger...
     def lock_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
-        Convenience method to lock the LedgerModel associated with the Accruable financial instrument.
+        Convenience method to lock the LedgerModel associated with thea Fund Transfer.
 
         Parameters
         ----------
@@ -465,14 +639,14 @@ class FundTransferModelAbstract(
 
     def unlock_ledger(self, commit: bool = False, raise_exception: bool = True):
         """
-        Convenience method to un-lock the LedgerModel associated with the Accruable financial instrument.
+        Convenience method to un-lock the LedgerModel associated with the Fund Transfer.
 
         Parameters
         ----------
         commit: bool
             Commits the transaction in the database. Defaults to False.
         raise_exception: bool
-            If True, raises ValidationError if LedgerModel already locked.
+            If True, raises ValidationError if LedgerModel already unlocked.
         """
         ledger_model = self.ledger
         if not ledger_model.is_locked():
@@ -481,9 +655,45 @@ class FundTransferModelAbstract(
             return
         ledger_model.unlock(commit, raise_exception=raise_exception)
 
+    # POST/UNPOST Ledger...
+    def post_ledger(self, commit: bool = False, raise_exception: bool = True):
+        """
+        Convenience method to post the LedgerModel associated with the Fund Transfer.
+
+        Parameters
+        ----------
+        commit: bool
+            Commits the transaction in the database. Defaults to False.
+        raise_exception: bool
+            If True, raises ValidationError if LedgerModel already posted.
+        """
+        ledger_model = self.ledger
+        if ledger_model.posted:
+            if raise_exception:
+                raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is already posted...')
+            return
+        ledger_model.post(commit, raise_exception=raise_exception)
+
+    def unpost_ledger(self, commit: bool = False, raise_exception: bool = True):
+        """
+        Convenience method to un-lock the LedgerModel associated with the Fund Transfer.
+
+        Parameters
+        ----------
+        commit: bool
+            Commits the transaction in the database. Defaults to False.
+        raise_exception: bool
+            If True, raises ValidationError if LedgerModel already unposted.
+        """
+        ledger_model = self.ledger
+        if not ledger_model.is_posted():
+            if raise_exception:
+                raise ValidationError(f'Fund Transfer ledger {ledger_model.name} is not posted...')
+            return
+        ledger_model.post(commit, raise_exception=raise_exception)
+
     # VOID Actions...
     def mark_as_void(self,
-                     user_model,
                      entity_slug: Optional[str] = None,
                      date_void: Optional[date] = None,
                      commit: bool = False,
@@ -497,9 +707,6 @@ class FundTransferModelAbstract(
         entity_slug: str
             Entity slug associated with the FundTransferModel. Avoids additional DB query if passed.
 
-        user_model
-            UserModel associated with request.
-
         date_void: date
             FundTransferModel void date. Defaults to localdate() if None.
 
@@ -507,7 +714,8 @@ class FundTransferModelAbstract(
             Commits transaction into DB. Defaults to False.
         """
         if not self.can_void():
-            raise FundTransferModelValidationError(f'Fund Transfer {self.fund_transfer_number} cannot be voided. Must be approved.')
+            raise FundTransferModelValidationError(
+                f'Fund Transfer {self.fund_transfer_number} cannot be voided. Must be approved.')
 
         if date_void:
             if isinstance(date_void, datetime):
@@ -528,15 +736,14 @@ class FundTransferModelAbstract(
             self.unlock_ledger(commit=False, raise_exception=False)
             self.migrate_state(
                 entity_slug=entity_slug,
-                user_model=user_model,
                 void=True,
                 raise_exception=False,
                 force_migrate=True)
             self.save()
             self.lock_ledger(commit=False, raise_exception=False)
         fund_transfer_status_void.send_robust(sender=self.__class__,
-                                     instance=self,
-                                     commited=commit, **kwargs)
+                                              instance=self,
+                                              commited=commit, **kwargs)
 
     def get_mark_as_void_html_id(self) -> str:
         """
@@ -600,7 +807,6 @@ class FundTransferModelAbstract(
                            'entity_slug': self.ledger.entity.slug,
                            'fund_transfer_pk': self.uuid
                        })
-
 
     def clean(self, commit: bool = True):
         """

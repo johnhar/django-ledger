@@ -339,6 +339,7 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
         return self.annotate(
             entity_unit_name=F('journal_entry__entity_unit__name'),
             fund_name=F('journal_entry__fund__name'),
+            receiving_fund_name=F('journal_entry__receiving_fund__name'),
             account_code=F('account__code'),
             account_name=F('account__name'),
             timestamp=F('journal_entry__timestamp'),

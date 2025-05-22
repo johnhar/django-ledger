@@ -657,7 +657,8 @@ class IODatabaseMixIn:
 
         if by_fund:
             ORDER_BY.append('journal_entry__fund__uuid')
-            VALUES += ['journal_entry__fund__uuid', 'journal_entry__fund__name']
+            VALUES += ['journal_entry__fund__uuid', 'journal_entry__fund__name',
+                       'journal_entry__receiving_fund__uuid', 'journal_entry__receiving_fund__name']
 
         if by_period:
             ORDER_BY.append('journal_entry__timestamp')
@@ -779,6 +780,7 @@ class IODatabaseMixIn:
             a['account__uuid'],
             a.get('journal_entry__entity_unit__uuid') if by_unit else None,
             a.get('journal_entry__fund__uuid') if by_fund else None,
+            a.get('journal_entry_receiving_fund__uuid') if by_fund else None,
             a.get('dt_idx').year if by_period else None,
             a.get('dt_idx').month if by_period else None,
             a.get('journal_entry__activity') if by_activity else None,

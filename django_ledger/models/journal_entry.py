@@ -792,8 +792,12 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         ------
             JournalEntryValidationError: If validation fails and raise_exception is True.
         """
-        # check that there are only 2 transactions: first one is a credit from an asset in the 'fund',
-        # and that the second one is a debit to an asset in the 'receiving fund'
+        # check that there are only 0 or 2 transactions:
+        # - it can be zero transactions while creating a new journal entry.
+        # - one of them is a credit and other is a debit
+        if txs_qs.count() == 0:
+            return True
+
         if txs_qs.count() != 2:
             if raise_exception:
                 raise JournalEntryValidationError(f'Must have 2 transactions in {self.uuid}')
@@ -801,7 +805,8 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         tx1 = txs_qs.first()
         tx2 = txs_qs.last()
 
-        is_valid = all([tx1.tx_type == CREDIT, tx2.tx_type == DEBIT])
+        is_valid = tx1.tx_type != tx2.tx_type and any([tx1.tx_type == CREDIT, tx2.tx_type == CREDIT]) and \
+                   any([tx1.tx_type == DEBIT, tx2.tx_type == DEBIT])
         if not is_valid and raise_exception:
             raise JournalEntryValidationError(
                 f'First transaction must be a credit from an asset in the "fund". Second transaction must be a debit to an asset in the "receiving fund".'
@@ -1493,7 +1498,7 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                     self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
 
                 if commit:
-                    self.save(update_fields=['je_number'])
+                    self.save(update_fields=['je_number'], verify=False)
 
         return self.je_number
 

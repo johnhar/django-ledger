@@ -23,7 +23,7 @@ from django_ledger.forms.app_filters import EntityFilterForm, ActivityFilterForm
 from django_ledger.forms.feedback import BugReportForm, RequestNewFeatureForm
 from django_ledger.io import ROLES_ORDER_ALL
 from django_ledger.io.utils import validate_activity, get_localdate
-from django_ledger.models import BillModel, InvoiceModel, JournalEntryModel, EntityModel
+from django_ledger.models import BillModel, InvoiceModel, JournalEntryModel, EntityModel, FundTransferModel
 from django_ledger.settings import (
     DJANGO_LEDGER_FINANCIAL_ANALYSIS, DJANGO_LEDGER_CURRENCY_SYMBOL,
     DJANGO_LEDGER_SPACED_CURRENCY_SYMBOL, DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES)
@@ -246,7 +246,7 @@ def jes_table(context, journal_entry_qs, next_url=None):
     return result
 
 @register.inclusion_tag('django_ledger/transactions/tags/txs_table.html')
-def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceModel], style='detail'):
+def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceModel, FundTransferModel], style='detail'):
     if isinstance(object_type, JournalEntryModel):
         transaction_model_qs = object_type.transactionmodel_set.all().with_annotated_details().order_by(
             '-timestamp')
@@ -255,6 +255,9 @@ def transactions_table(object_type: Union[JournalEntryModel, BillModel, InvoiceM
         transaction_model_qs = object_type.get_transaction_queryset(annotated=True).order_by('-timestamp')
         is_fund_enabled = object_type.ledger.entity.is_fund_enabled()
     elif isinstance(object_type, InvoiceModel):
+        transaction_model_qs = object_type.get_transaction_queryset(annotated=True).order_by('-timestamp')
+        is_fund_enabled = object_type.ledger.entity.is_fund_enabled()
+    elif isinstance(object_type, FundTransferModel):
         transaction_model_qs = object_type.get_transaction_queryset(annotated=True).order_by('-timestamp')
         is_fund_enabled = object_type.ledger.entity.is_fund_enabled()
     else:

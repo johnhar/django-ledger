@@ -14,8 +14,7 @@ from django.views.generic import (
 from django.views.generic.detail import SingleObjectMixin
 
 from django_ledger.forms.fund_transfer import (
-    FundTransferModelCreateForm,
-    BaseFundTransferModelUpdateForm, FundTransferModelConfigureForm, FundTransferModelUpdateForm,
+    FundTransferModelCreateForm, FundTransferModelConfigureForm, FundTransferModelUpdateForm,
 )
 from django_ledger.io.utils import get_localdate
 from django_ledger.models import EntityModel
@@ -76,6 +75,13 @@ class FundTransferModelCreateView(FundTransferModelModelBaseView, CreateView):
             entity_slug=self.AUTHORIZED_ENTITY_MODEL,
             commit_ledger=True
         )
+        fund_transfer_model.migrate_state(
+            entity_slug=self.AUTHORIZED_ENTITY_MODEL.slug,
+            raise_exception=False
+        )
+        fund_transfer_model.post_ledger(commit=True, raise_exception=False)
+        fund_transfer_model.lock_ledger(commit=True, raise_exception=False)
+
         return super(FundTransferModelCreateView, self).form_valid(form)
 
     def get_success_url(self):
@@ -126,7 +132,6 @@ class FundTransferModelDetailView(FundTransferModelModelBaseView, DetailView):
         'header_subtitle_icon': 'uil:fund_transfer'
     }
     http_method_names = ['get']
-    action_update_items = False
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
@@ -173,7 +178,6 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
         'header_subtitle_icon': 'uil:fund_transfer'
     }
     http_method_names = ['get', 'post']
-    action_update_items = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -182,12 +186,6 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
     def get_form(self, form_class=None):
         form_class = self.get_form_class()
         entity_model: EntityModel = self.get_authorized_entity_instance()
-        if self.request.method == 'POST' and self.action_update_items:
-            return form_class(
-                entity_model=entity_model,
-                user_model=self.request.user,
-                instance=self.object
-            )
         return form_class(
             entity_model=entity_model,
             user_model=self.request.user,
@@ -206,7 +204,6 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
                          **kwargs):
 
         context = super().get_context_data(object_list=object_list, **kwargs)
-        entity_model: EntityModel = self.get_authorized_entity_instance()
         fund_transfer_model: FundTransferModel = self.object
         ledger_model = fund_transfer_model.ledger
 
@@ -257,39 +254,25 @@ class FundTransferModelUpdateView(FundTransferModelModelBaseView, UpdateView):
         )
 
     def form_valid(self, form):
-        form.save(commit=False)
+        form.save()
+        queryset = self.get_queryset()
+        fund_transfer_model: FundTransferModel = self.get_object(queryset=queryset)
+        self.object = fund_transfer_model
+
+        fund_transfer_model.unlock_ledger(commit=False, raise_exception=False)
+        fund_transfer_model.unpost_ledger(commit=False, raise_exception=False)
+        fund_transfer_model.migrate_state(
+            entity_slug=self.kwargs['entity_slug'],
+            je_timestamp=self.object.ledger.journal_entries.first().timestamp,
+            raise_exception=False
+        )
+        fund_transfer_model.post_ledger(commit=True, raise_exception=False)
+        fund_transfer_model.lock_ledger(commit=True, raise_exception=False)
         messages.add_message(self.request,
                              messages.SUCCESS,
                              f'Fund Transfer {self.object.fund_transfer_number} successfully updated.',
                              extra_tags='is-success')
         return super().form_valid(form)
-
-    def get(self, request, *args, **kwargs):
-        if self.action_update_items:
-            return HttpResponseRedirect(
-                redirect_to=reverse('django_ledger:fund-transfer-update',
-                                    kwargs={
-                                        'entity_slug': self.kwargs['entity_slug'],
-                                        'fund_transfer_pk': self.kwargs['fund_transfer_pk']
-                                    })
-            )
-        return super(FundTransferModelUpdateView, self).get(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        if self.action_update_items:
-
-            if not request.user.is_authenticated:
-                return HttpResponseForbidden()
-
-            queryset = self.get_queryset()
-            entity_model: EntityModel = self.get_authorized_entity_instance()
-            fund_transfer_model: FundTransferModel = self.get_object(queryset=queryset)
-            fund_transfer_pk = fund_transfer_model.uuid
-
-            self.object = fund_transfer_model
-            context = self.get_context_data()
-            return self.render_to_response(context=context)
-        return super(FundTransferModelUpdateView, self).post(request, **kwargs)
 
 
 # ACTION VIEWS...
