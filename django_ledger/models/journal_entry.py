@@ -120,7 +120,7 @@ class JournalEntryModelQuerySet(QuerySet[T], Generic[T]):
             raise FieldError("Cannot create Journal Entries in a posted state without 'force_create=True'.")
 
         obj = self.model(**kwargs)
-        self._for_write = True  # TODO JJH this isn't used elswhere. Delete?
+        self._for_write = True
 
         # Save the object with optional pre-save verification.
         obj.save(force_insert=True, using=self.db, verify=verify_on_save)
