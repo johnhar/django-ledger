@@ -517,8 +517,6 @@ class FundTransferModelAbstract(
                 je = self.ledger.journal_entries.first()
                 if not je:
                     je = JournalEntryModel(
-                        fund_id=self.from_fund_id,
-                        receiving_fund_id=self.to_fund_id,
                         timestamp=je_timestamp,
                         description=self.get_migrate_state_desc(),
                         origin='create',
@@ -526,10 +524,8 @@ class FundTransferModelAbstract(
                     )
                     je.save()
                 else:
-                    je.fund_id = self.from_fund_id
-                    je.receiving_fund_id = self.to_fund_id
                     je.origin = 'update'
-                    je.save(update_fields=['fund_id', 'receiving_fund_id', 'origin'])
+                    je.save(update_fields=['origin'])
 
                 txs_qs = je.get_transaction_queryset()
                 if not txs_qs:
@@ -551,7 +547,7 @@ class FundTransferModelAbstract(
                         tx.amount = abs(self.amount)
                         tx.fund_id = self.from_fund_id if tx.tx_type == 'credit' else self.to_fund_id
                         tx.account_id = self.from_account_id if tx.tx_type == 'credit' else self.to_account_id
-                    TransactionModel.objects.bulk_update(txs_list, fields=['amount', 'account_id'])
+                    TransactionModel.objects.bulk_update(txs_list, fields=['amount', 'account_id', 'fund_id'])
 
                 je.clean(verify=True)
                 if je.is_verified():

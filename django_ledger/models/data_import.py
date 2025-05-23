@@ -145,7 +145,7 @@ class StagedTransactionModelManager(Manager):
         ).annotate(
             entity_slug=F('import_job__bank_account_model__entity_model__slug'),
             entity_unit=F('transaction_model__journal_entry__entity_unit__name'),
-            fund=F('transaction_model__journal_entry__fund__name'),
+            fund=F('transaction_model__fund__name'),
             children_count=Count('split_transaction_set'),
             children_mapped_count=Count('split_transaction_set__account_model_id'),
             total_amount_split=Coalesce(
@@ -963,7 +963,7 @@ class StagedTransactionModelAbstract(CreateUpdateMixIn):
                     _, _ = ledger_model.commit_txs(
                         je_timestamp=self.date_posted,
                         je_unit_model=unit_model,
-                        je_fund_model=fund_model,
+                        fund_model=fund_model,
                         je_txs=je_data,
                         je_desc=self.memo,
                         je_posted=False,

@@ -194,7 +194,7 @@ class AccountModelYearDetailView(BaseAccountModelBaseView,
         ).select_related(
             'journal_entry',
             'journal_entry__entity_unit',
-            'journal_entry__fund',
+            'fund',
             'journal_entry__ledger__billmodel',
             'journal_entry__ledger__invoicemodel',
         )

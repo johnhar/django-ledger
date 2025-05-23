@@ -69,19 +69,6 @@ class TransactionModelFormSet(BaseModelFormSet):
                 fund_qs = self.ENTITY_MODEL.fundmodel_set.all().order_by('name')
                 form.fields['fund'].queryset = fund_qs
 
-                # For fund transfers, set the appropriate fund based on transaction type
-                if self.JE_MODEL.is_fund_transfer():
-                    # For new forms (no instance), pre-set the fund based on tx_type
-                    if not form.instance.pk and 'tx_type' in form.data:
-                        tx_type = form.data.get(f'{form.prefix}-tx_type')
-                        if tx_type == 'credit':
-                            form.fields['fund'].initial = self.JE_MODEL.fund_id
-                        elif tx_type == 'debit':
-                            form.fields['fund'].initial = self.JE_MODEL.receiving_fund_id
-                # For regular journal entries, set the fund to the journal entry's fund
-                else:
-                    form.fields['fund'].initial = self.JE_MODEL.fund_id
-
             if self.JE_MODEL.is_locked():
                 form.fields['account'].disabled = True
                 form.fields['tx_type'].disabled = True
@@ -125,11 +112,9 @@ class TransactionModelFormSet(BaseModelFormSet):
                 debit_form = next((form for form in valid_forms if form.cleaned_data.get('tx_type') == 'debit'), None)
 
                 if credit_form and debit_form:
-                    # Check that credit transaction has source fund and debit transaction has receiving fund
-                    if credit_form.cleaned_data.get('fund') != self.JE_MODEL.fund:
-                        raise ValidationError(message=_('Credit transaction must use the source fund.'))
-                    if debit_form.cleaned_data.get('fund') != self.JE_MODEL.receiving_fund:
-                        raise ValidationError(message=_('Debit transaction must use the receiving fund.'))
+                    # Check that credit and debit transactions have different funds
+                    if credit_form.cleaned_data.get('fund') == debit_form.cleaned_data.get('fund'):
+                        raise ValidationError(message=_('Credit and debit transactions must have different funds in a fund transfer.'))
 
 
 def get_transactionmodel_formset_class(journal_entry_model: JournalEntryModel):

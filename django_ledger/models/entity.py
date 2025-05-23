@@ -2722,7 +2722,7 @@ class EntityModelAbstract(MP_Node,
                         ledger_posted: bool = False,
                         je_timestamp: Optional[Union[datetime, date, str]] = None,
                         je_posted: bool = False,
-                        je_fund_model: Optional[Union[FundModel, UUID]] = None,):
+                        fund_model: Optional[Union[FundModel, UUID]] = None, ):
 
         if coa_model:
             self.validate_chart_of_accounts_for_entity(coa_model)
@@ -2797,7 +2797,7 @@ class EntityModelAbstract(MP_Node,
             je_txs=txs,
             je_posted=je_posted,
             je_ledger_model=ledger_model,
-            je_fund_model=je_fund_model
+            fund_model=fund_model
         )
 
         return ledger_model

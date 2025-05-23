@@ -97,7 +97,7 @@ from typing import List, Set, Union, Tuple, Optional, Dict
 from django.conf import settings as global_settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Sum, QuerySet, F, DecimalField, When, Case, Q, UUIDField, CharField, Value
+from django.db.models import Sum, QuerySet, F, DecimalField, When, Case
 from django.db.models.functions import TruncMonth
 from django.utils.translation import gettext_lazy as _
 
@@ -1085,7 +1085,7 @@ class IODatabaseMixIn:
                    je_posted: bool = False,
                    je_ledger_model=None,
                    je_unit_model=None,
-                   je_fund_model=None,
+                   fund_model=None,
                    je_desc=None,
                    je_origin=None,
                    force_je_retrieval: bool = False,
@@ -1115,7 +1115,7 @@ class IODatabaseMixIn:
         je_unit_model : object, optional
             An optional instance of EntityUnitModel used for validating entity unit
             associations with transactions.
-        je_fund_model : object, optional
+        fund_model : object, optional
             An optional instance of FundModel used for validating fund
             associations with transactions.
         je_desc : str, optional
@@ -1200,11 +1200,11 @@ class IODatabaseMixIn:
         # Validates that the provided FundModel id valid...
         if all([
             isinstance(self, lazy_loader.get_entity_model()),
-            je_fund_model is not None,
+            fund_model is not None,
         ]):
             # noinspection PyUnresolvedReferences
-            if je_fund_model.entity_id != self.uuid:
-                raise IOValidationError(f'FundModel {je_fund_model} does not belong to {self}')
+            if fund_model.entity_id != self.uuid:
+                raise IOValidationError(f'FundModel {fund_model} does not belong to {self}')
 
         if not je_ledger_model:
             je_ledger_model = self
@@ -1227,7 +1227,6 @@ class IODatabaseMixIn:
             je_model = JournalEntryModel(
                 ledger=je_ledger_model,
                 entity_unit=je_unit_model,
-                fund=je_fund_model,
                 description=je_desc,
                 timestamp=je_timestamp,
                 origin=je_origin,
@@ -1242,6 +1241,7 @@ class IODatabaseMixIn:
                 TransactionModel(
                     account=txm_kwargs['account'],
                     amount=txm_kwargs['amount'],
+                    fund=fund_model,
                     tx_type=txm_kwargs['tx_type'],
                     description=txm_kwargs['description'],
                     journal_entry=je_model,

@@ -459,8 +459,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             models.Index(fields=['timestamp']),
             models.Index(fields=['activity']),
             models.Index(fields=['entity_unit']),
-            models.Index(fields=['fund']),
-            models.Index(fields=['receiving_fund']),
             models.Index(fields=['locked']),
             models.Index(fields=['posted']),
             models.Index(fields=['je_number']),
@@ -818,12 +816,12 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         credit_tx = tx1 if tx1.tx_type == CREDIT else tx2
         debit_tx = tx1 if tx1.tx_type == DEBIT else tx2
 
-        # Check that the credit transaction has the source fund and the debit transaction has the receiving fund
-        fund_valid = (credit_tx.fund_id == self.fund_id) and (debit_tx.fund_id == self.receiving_fund_id)
+        # Check that the credit and debit transactions have different funds
+        fund_valid = credit_tx.fund_id != debit_tx.fund_id
 
         if not fund_valid and raise_exception:
             raise JournalEntryValidationError(
-                f'Credit transaction must be from the source fund and debit transaction must be to the receiving fund.'
+                f'Credit and debit transactions must have different funds in a fund transfer.'
             )
 
         return tx_types_valid and fund_valid
@@ -1517,10 +1515,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 'fiscal_year': fy_key,
                 'key__exact': EntityStateModel.KEY_JOURNAL_ENTRY
             }
-            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                LOOKUP['fund_id__exact'] = self.fund_id
-                # TODO JJH determine if we need to include the receiving fund in the lookup
-
             state_model_qs = EntityStateModel.objects.filter(**LOOKUP).select_related(
                 'entity_model').select_for_update()
             state_model = state_model_qs.get()
@@ -1537,10 +1531,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 'key': EntityStateModel.KEY_JOURNAL_ENTRY,
                 'sequence': 1
             }
-            if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                LOOKUP['fund_id'] = self.fund_id
-                # TODO JJH determine if we need to include the receiving fund in the lookup
-
             state_model = EntityStateModel.objects.create(**LOOKUP)
             return state_model
 

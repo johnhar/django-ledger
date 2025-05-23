@@ -25,15 +25,15 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Q, QuerySet, Manager, F, Case, When, Value, CharField
+from django.db.models import Q, QuerySet, Manager, F
 from django.db.models.signals import pre_save
 from django.utils.translation import gettext_lazy as _
 
 from django_ledger.io.utils import validate_io_timestamp
 from django_ledger.models import AccountModel, BillModel, EntityModel, InvoiceModel, LedgerModel
+from django_ledger.models.fund import FundModel
 from django_ledger.models.mixins import CreateUpdateMixIn
 from django_ledger.models.unit import EntityUnitModel
-from django_ledger.models.fund import FundModel
 from django_ledger.models.utils import lazy_loader
 
 UserModel = get_user_model()
@@ -170,46 +170,6 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
         if isinstance(fund_slug, FundModel):
             return self.filter(fund=fund_slug)
         return self.filter(fund__slug__exact=fund_slug)
-
-    def for_fund_transfer(self, fund_slug: Union[str, FundModel]):
-        """
-        Filters transactions that are part of fund transfers involving the specified fund.
-
-        This method handles the special case of fund transfers by combining three subsets:
-        - Normal transactions where the fund is directly associated
-        - Fund transfer transactions where the fund is the source (credit transactions)
-        - Fund transfer transactions where the fund is the destination (debit transactions)
-
-        Parameters
-        ----------
-        fund_slug : str or FundModel
-            A string representing the slug of the fund or an `FundModel` instance.
-
-        Returns
-        -------
-        TransactionModelQuerySet
-            A QuerySet filtered for transactions involved in fund transfers with the specified fund.
-        """
-        # Unlike the other filters, we have a special case for fund transfers.  We combine the three subsets of:
-        # - normal transactions (journal_entry.receiving_fund is null)
-        # - fund transfer transaction for the source found
-        # - fund transfer transaction for the receiving fund
-        if isinstance(fund_slug, FundModel):
-            fund_matches = Q(journal_entry__fund=fund_slug)
-            to_fund_matches = Q(journal_entry__receiving_fund=fund_slug)
-        else:
-            fund_matches = Q(journal_entry__fund__slug__exact=fund_slug)
-            to_fund_matches = Q(journal_entry__receiving_fund__slug__exact=fund_slug)
-
-        # Combine all conditions into a single filter
-        combined_filter = (
-                (Q(journal_entry__receiving_fund__isnull=True) & fund_matches) |  # Case 1
-                (Q(journal_entry__receiving_fund__isnull=False) & fund_matches & Q(tx_type='credit')) |  # Case 2
-                (Q(journal_entry__receiving_fund__isnull=False) & to_fund_matches & Q(tx_type='debit'))  # Case 3
-        )
-
-        # Apply the combined filter to the queryset
-        return self.filter(combined_filter)
 
     def for_activity(self, activity_list: Union[str, List[str], Set[str]]):
         """
@@ -389,40 +349,8 @@ class TransactionModelQuerySet(QuerySet[T], Generic[T]):
             entity_unit_name=F('journal_entry__entity_unit__name'),
             account_code=F('account__code'),
             account_name=F('account__name'),
+            fund_name=F('fund__name'),
             timestamp=F('journal_entry__timestamp'),
-            # Annotate fund_name - prefer transaction's fund, fall back to journal entry's fund
-            fund_name=Case(
-                # First try to use the transaction's fund
-                When(
-                    Q(fund__isnull=False),
-                    then=F('fund__name')
-                ),
-                # For backward compatibility, fall back to the journal entry's fund
-                When(
-                    Q(journal_entry__receiving_fund__isnull=True),  # Case 1: No receiving fund
-                    then=F('journal_entry__fund__name')  # Use 'journal_entry__fund__name'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='credit'),  # Case 2: Fund transfer (credit)
-                    then=F('journal_entry__fund__name')  # Use 'journal_entry__fund__name'
-                ),
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False) & Q(tx_type='debit'),  # Case 3: Fund transfer (debit)
-                    then=F('journal_entry__receiving_fund__name')  # Use 'journal_entry__receiving_fund__name'
-                ),
-                default=Value('', output_field=CharField()),  # Fallback in case no condition matches
-                output_field=CharField(),
-            ),
-            # Annotate receiving_fund_name for fund transfers
-            receiving_fund_name=Case(
-                # For fund transfers, get the receiving fund name
-                When(
-                    Q(journal_entry__receiving_fund__isnull=False),
-                    then=F('journal_entry__receiving_fund__name')
-                ),
-                default=Value('', output_field=CharField()),  # Fallback for non-fund-transfers
-                output_field=CharField(),
-            )
         )
 
         return annotated_qs
