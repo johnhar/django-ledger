@@ -2,6 +2,9 @@ import os
 
 from django.test import override_settings
 from django_ledger.tests.base import DjangoLedgerBaseTest
+from django_ledger.models import FundModel
+from decimal import Decimal
+
 
 class FundFeatureTests(DjangoLedgerBaseTest):
     def test_fund_feature_enablement(self):
@@ -29,4 +32,23 @@ class FundFeatureTests(DjangoLedgerBaseTest):
 
 @override_settings(DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES=True)
 class FundModelTests(DjangoLedgerBaseTest):
-    pass
+
+    def test_create_fund(self):
+        """
+        Tests the creation of a fund via entity.create_fund()
+        """
+        entity_model = self.get_random_entity_model()
+        fund_name = 'Test Fund'
+        doc_prefix = 'TF0'
+
+        fund_model = entity_model.create_fund_by_kwargs(
+            fund_model_kwargs={
+                'name': fund_name,
+                'document_prefix': doc_prefix
+            }
+        )
+
+        self.assertIsInstance(fund_model, FundModel)
+        self.assertEqual(fund_model.name, fund_name)
+        self.assertEqual(fund_model.entity, entity_model)
+        self.assertEqual(fund_model.document_prefix, doc_prefix)

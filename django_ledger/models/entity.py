@@ -67,7 +67,9 @@ ENTITY_RANDOM_SLUG_SUFFIX = ascii_lowercase + digits
 class EntityModelValidationError(ValidationError):
     pass
 
+
 T = TypeVar('T', bound='ClosingEntryTransactionModel')
+
 
 class EntityModelQuerySet(MP_NodeQuerySet[T], Generic[T]):
     """
@@ -1183,7 +1185,38 @@ class EntityModelAbstract(MP_Node,
     def is_fund_enabled(self):
         return self.is_nonprofit if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
-    def create_fund(self, fund_model_kwargs: Dict, commit: bool = True) -> FundModel:
+    def create_fund(self,
+                    name: str,
+                    document_prefix: str = None,
+                    commit: bool = True) -> FundModel:
+        """
+        Creates a new FundModel associated with the EntityModel instance.
+
+        Parameters
+        ----------
+        name: str
+            The name of the fund
+        document_prefix: str
+            Optional, the 3-letter prefix to use in the JE.  Default is None, i.e. autogenerate.
+        commit: bool
+            Saves the FundModel instance in the Database.
+
+        Returns
+        -------
+        FundModel
+        """
+        document_prefix = document_prefix or self.generate_slug_from_name(name)[:3]
+        fund_model = FundModel(entity=self, name=name, document_prefix=document_prefix)
+        fund_model.create_fund_slug(name=fund_model.name)
+        FundModel.add_root(instance=fund_model)
+        fund_model.clean()
+        if commit:
+            fund_model.save()
+        return fund_model
+
+    def create_fund_by_kwargs(self,
+                              fund_model_kwargs: Dict,
+                              commit: bool = True) -> FundModel:
         """
         Creates a new FundModel associated with the EntityModel instance.
 
@@ -1198,13 +1231,9 @@ class EntityModelAbstract(MP_Node,
         -------
         FundModel
         """
-        fund_model = FundModel(entity_model=self, **fund_model_kwargs)
-        fund_model.create_fund_slug(name=fund_model.name)
-        FundModel.add_root(instance=fund_model)
-        fund_model.clean()
-        if commit:
-            fund_model.save()
-        return fund_model
+        return self.create_fund(name=fund_model_kwargs['name'],
+                                document_prefix=fund_model_kwargs.get('document_prefix',None),
+                                commit=commit)
 
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
@@ -2992,7 +3021,6 @@ class EntityModelAbstract(MP_Node,
             ledger__entity__uuid__exact=self.uuid
         ).select_related('ledger', 'ledger__entity')
 
-
     # ### RANDOM DATA GENERATION ####
 
     def populate_random_data(self, start_date: date, days_forward=180, tx_quantity: int = 25):
@@ -3281,10 +3309,10 @@ class EntityStateModelAbstract(Model):
                                     blank=True,
                                     null=True)
     fund = models.ForeignKey('django_ledger.FundModel',
-                                    on_delete=models.RESTRICT,
-                                    verbose_name=_('Fund'),
-                                    blank=True,
-                                    null=True)
+                             on_delete=models.RESTRICT,
+                             verbose_name=_('Fund'),
+                             blank=True,
+                             null=True)
     fiscal_year = models.SmallIntegerField(
         verbose_name=_('Fiscal Year'),
         validators=[MinValueValidator(limit_value=1900)],
