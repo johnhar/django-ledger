@@ -1205,7 +1205,7 @@ class EntityModelAbstract(MP_Node,
         -------
         FundModel
         """
-        document_prefix = document_prefix or self.generate_slug_from_name(name)[:3]
+        document_prefix = document_prefix or ''.join(choices(ascii_lowercase + digits, k=3))
         fund_model = FundModel(entity=self, name=name, document_prefix=document_prefix)
         fund_model.create_fund_slug(name=fund_model.name)
         FundModel.add_root(instance=fund_model)
