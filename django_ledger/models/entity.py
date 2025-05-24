@@ -1183,6 +1183,29 @@ class EntityModelAbstract(MP_Node,
     def is_fund_enabled(self):
         return self.is_nonprofit if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES else False
 
+    def create_fund(self, fund_model_kwargs: Dict, commit: bool = True) -> FundModel:
+        """
+        Creates a new FundModel associated with the EntityModel instance.
+
+        Parameters
+        ----------
+        fund_model_kwargs: dict
+            The kwargs to be used for the new FundModel.
+        commit: bool
+            Saves the FundModel instance in the Database.
+
+        Returns
+        -------
+        FundModel
+        """
+        fund_model = FundModel(entity_model=self, **fund_model_kwargs)
+        fund_model.create_fund_slug(name=fund_model.name)
+        FundModel.add_root(instance=fund_model)
+        fund_model.clean()
+        if commit:
+            fund_model.save()
+        return fund_model
+
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
                                               coa_model: ChartOfAccountModel,

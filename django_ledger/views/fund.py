@@ -82,7 +82,9 @@ class FundModelCreateView(FundModelModelBaseView, CreateView):
         entity_model_qs = EntityModel.objects.for_user(user_model=self.request.user)
         entity_model = get_object_or_404(entity_model_qs, slug__exact=self.kwargs['entity_slug'])
         fund_model.entity = entity_model
+        fund_model.create_fund_slug(name=fund_model.name)
         FundModel.add_root(instance=fund_model)
+        fund_model.save()
         return HttpResponseRedirect(self.get_success_url())
 
 
