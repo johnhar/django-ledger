@@ -32,7 +32,7 @@ from django.core import serializers
 from django.core.cache import caches
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, IntegrityError, transaction
 from django.db.models import Q, F, Model
 from django.db.models.signals import pre_save
 from django.urls import reverse
@@ -1188,7 +1188,8 @@ class EntityModelAbstract(MP_Node,
     def create_fund(self,
                     name: str,
                     document_prefix: str = None,
-                    commit: bool = True) -> FundModel:
+                    raise_exception: bool = True,
+                    commit: bool = True) -> Union[FundModel, None]:
         """
         Creates a new FundModel associated with the EntityModel instance.
 
@@ -1198,25 +1199,44 @@ class EntityModelAbstract(MP_Node,
             The name of the fund
         document_prefix: str
             Optional, the 3-letter prefix to use in the JE.  Default is None, i.e. autogenerate.
+        raise_exception: bool
+            Raise exception if fund already exists. Defaults to True.  Else return None.
         commit: bool
             Saves the FundModel instance in the Database.
 
         Returns
         -------
-        FundModel
+        FundModel or None
         """
-        document_prefix = document_prefix or ''.join(choices(ascii_lowercase + digits, k=3))
+        document_prefix = document_prefix or slugify(name)[:3]  # default to 3-letter prefix if not provided
         fund_model = FundModel(entity=self, name=name, document_prefix=document_prefix)
         fund_model.create_fund_slug(name=fund_model.name)
-        FundModel.add_root(instance=fund_model)
+        try:
+            with transaction.atomic():
+                FundModel.add_root(instance=fund_model)
+        except IntegrityError:
+            # we usually get an IntegrityError if the document_prefix is not unique, i.e. another fund
+            # with the first 3 letters of the name is already created.  So, try a random 3 character prefix
+            fund_model.document_prefix = ''.join(choices(ascii_lowercase + digits, k=3))
+            try:
+                with transaction.atomic():
+                    FundModel.add_root(instance=fund_model)
+            except Exception as e:
+                if raise_exception:
+                    raise e
+                else:
+                    return None
+
         fund_model.clean()
         if commit:
             fund_model.save()
+
         return fund_model
 
     def create_fund_by_kwargs(self,
                               fund_model_kwargs: Dict,
-                              commit: bool = True) -> FundModel:
+                              raise_exception: bool = True,
+                              commit: bool = True) -> Union[FundModel, None]:
         """
         Creates a new FundModel associated with the EntityModel instance.
 
@@ -1224,15 +1244,18 @@ class EntityModelAbstract(MP_Node,
         ----------
         fund_model_kwargs: dict
             The kwargs to be used for the new FundModel.
+        raise_exception: bool
+            Raises exception if fund already exists. Defaults to True.  Else return None.
         commit: bool
             Saves the FundModel instance in the Database.
 
         Returns
         -------
-        FundModel
+        FundModel or None
         """
         return self.create_fund(name=fund_model_kwargs['name'],
                                 document_prefix=fund_model_kwargs.get('document_prefix',None),
+                                raise_exception=raise_exception,
                                 commit=commit)
 
     # Model Validators....
