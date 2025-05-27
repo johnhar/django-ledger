@@ -916,6 +916,17 @@ class EntityModelAbstract(MP_Node,
             parent_entity_model.add_child(instance=entity_model)
         return entity_model
 
+    def delete_entity(self):
+        # delete all COA and accounts.  Accounts will delete on COA deletion.
+        # noinspection PyUnresolvedReferences
+        coa_model_qs = self.chartofaccountmodel_set.all()
+        for coa in coa_model_qs:
+            if self.default_coa == coa:
+                self.default_coa = None
+                self.save(update_fields=['default_coa'])
+            coa.delete()
+        self.delete()
+
     # ### ACCRUAL METHODS ######
     def get_accrual_method(self) -> str:
         if self.is_cash_method():
