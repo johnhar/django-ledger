@@ -778,7 +778,6 @@ class AccrualMixIn(models.Model):
                 je_list = {
                     (u, f): JournalEntryModel(
                         entity_unit_id=u,
-                        fund_id=f,
                         timestamp=now_timestamp,
                         description=self.get_migrate_state_desc(),
                         origin='migration',
@@ -795,6 +794,7 @@ class AccrualMixIn(models.Model):
                         amount=abs(round(amt, 2)),
                         tx_type=self.get_tx_type(acc_bal_type=bal_type, adjustment_amount=amt),
                         account_id=acc_uuid,
+                        fund_id=fund_uuid,
                         description=self.get_migrate_state_desc()
                     )) for (acc_uuid, unit_uuid, fund_uuid, bal_type), amt in diff_idx.items() if amt
                 ]

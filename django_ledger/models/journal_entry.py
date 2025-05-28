@@ -344,11 +344,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
     entity_unit : EntityUnitModel
         A reference to a logical and self-contained structure within the `EntityModel`.
         Provides context for the journal entry. See `EntityUnitModel` documentation for details.
-    fund : FundModel
-        A reference to a logical and self-contained structure within the `EntityModel`.
-        Provides context for the journal entry. See `FundModel` documentation for details.
-    receiving_fund : FundModel
-        A reference to the fund that receives a transfer from 'fund'.  This field is optional and only used in fund transfers.
     activity : str
         Indicates the nature of the activity associated with the journal entry.
         Must be one of the predefined `ACTIVITIES` (e.g., Operating, Financing, Investing) and is programmatically determined.
@@ -411,21 +406,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         blank=True,
         null=True,
         verbose_name=_('Associated Entity Unit')
-    )
-    fund = models.ForeignKey(
-        'django_ledger.FundModel',
-        on_delete=models.RESTRICT,
-        blank=True,
-        null=True,
-        verbose_name=_('Associated Fund')
-    )
-    receiving_fund = models.ForeignKey(
-        'django_ledger.FundModel',
-        on_delete=models.RESTRICT,
-        blank=True,
-        null=True,
-        related_name='receiving_fund',
-        verbose_name=_('Receiving Fund')
     )
     activity = models.CharField(
         choices=ACTIVITIES,
@@ -693,7 +673,21 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
         -------
             bool: True if the Journal Entry is a fund transfer, otherwise False.
         """
-        return self.receiving_fund is not None
+        if not DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
+            return False
+
+        txs_qs = self.get_transaction_queryset()
+        if txs_qs.count() != 2:
+            return False
+
+        # Get the two transactions
+        tx1 = txs_qs.first()
+        tx2 = txs_qs.last()
+
+        # Check if they have different funds
+        if tx1 and tx2 and tx1.fund_id and tx2.fund_id:
+            return tx1.fund_id != tx2.fund_id
+        return False
 
     def is_balance_valid(self, txs_qs: TransactionModelQuerySet, raise_exception: bool = True) -> bool:
         """
@@ -889,37 +883,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             return self.entity_unit.name
         return no_unit_name
 
-    def get_fund_name(self, no_fund_name: str = "") -> str:
-        """
-        Retrieves the name of the fund associated with the Journal Entry.
-
-        Parameters:
-            no_fund_name (str): The fallback name to return if no fund is associated.
-
-        Returns:
-            str: The name of the fund, or the fallback provided.
-
-        Deprecated:
-            This method uses the fund field in JournalEntryModel, which is deprecated.
-            In the future, funds will be associated with individual transactions.
-            Use get_transactions_fund_name() instead.
-        """
-        import warnings
-        warnings.warn(
-            "The fund field in JournalEntryModel is deprecated. "
-            "In the future, funds will be associated with individual transactions. "
-            "Use get_transactions_fund_name() instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-
-        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-            if self.fund_id:
-                return self.fund.name
-            return no_fund_name
-        else:
-            raise EnvironmentError(
-                f'Nonprofit features are not enabled. Please enable them before calling this method.')
 
     def get_transactions_fund_name(self, no_fund_name: str = "") -> str:
         """
@@ -952,37 +915,6 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             raise EnvironmentError(
                 f'Nonprofit features are not enabled. Please enable them before calling this method.')
 
-    def get_receiving_fund_name(self, no_fund_name: str = "") -> str:
-        """
-        Retrieves the name of the receiving fund associated with the Journal Entry.
-
-        Parameters:
-            no_fund_name (str): The fallback name to return if no fund is associated.
-
-        Returns:
-            str: The name of the fund, or the fallback provided.
-
-        Deprecated:
-            This method uses the receiving_fund field in JournalEntryModel, which is deprecated.
-            In the future, funds will be associated with individual transactions.
-            Use get_transactions_receiving_fund_name() instead.
-        """
-        import warnings
-        warnings.warn(
-            "The receiving_fund field in JournalEntryModel is deprecated. "
-            "In the future, funds will be associated with individual transactions. "
-            "Use get_transactions_receiving_fund_name() instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-
-        if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-            if self.receiving_fund_id:
-                return self.receiving_fund.name
-            return no_fund_name
-        else:
-            raise EnvironmentError(
-                f'Nonprofit features are not enabled. Please enable them before calling this method.')
 
     def get_transactions_receiving_fund_name(self, no_fund_name: str = "") -> str:
         """
@@ -1579,9 +1511,20 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
                 seq = str(state_model.sequence).zfill(DJANGO_LEDGER_DOCUMENT_NUMBER_PADDING)
 
                 if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                    # if this is a fund transfer, use a fixed prefix, else determine the fund prefix like the unit's prefix
-                    fund_prefix = 'TFR' if self.receiving_fund_id else \
-                        self.fund.document_prefix if self.fund_id else DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
+                    # if this is a fund transfer, use a fixed prefix, else determine the fund prefix from transactions
+                    if self.is_fund_transfer():
+                        fund_prefix = 'FTX'
+                    else:
+                        # Get transactions to determine fund prefix
+                        txs_qs = self.get_transaction_queryset()
+                        if txs_qs.exists():
+                            tx = txs_qs.first()
+                            if tx and tx.fund_id:
+                                fund_prefix = tx.fund.document_prefix
+                            else:
+                                fund_prefix = DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
+                        else:
+                            fund_prefix = DJANGO_LEDGER_JE_NUMBER_NO_FUND_PREFIX
                     self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{fund_prefix}-{seq}'
                 else:
                     self.je_number = f'{DJANGO_LEDGER_JE_NUMBER_PREFIX}-{state_model.fiscal_year}-{unit_prefix}-{seq}'
@@ -1655,12 +1598,14 @@ class JournalEntryModelAbstract(CreateUpdateMixIn):
             #         raise JournalEntryValidationError('At least two transactions required.')
 
             if DJANGO_LEDGER_ENABLE_NONPROFIT_FEATURES:
-                # every journal entry must have a fund associated with it, and if it's a fund transfer,
-                # be a valid fund transfer
-                is_fund_valid = self.fund_id is not None
+                # For fund transfers, validate that the transactions are valid
                 if self.is_fund_transfer():
-                    is_fund_valid = is_fund_valid and \
-                                    self.is_fund_transfer_txs_valid(txs_qs=txs_qs, raise_exception=raise_exception)
+                    is_fund_valid = self.is_fund_transfer_txs_valid(txs_qs=txs_qs, raise_exception=raise_exception)
+                else:
+                    # For regular journal entries, check if at least one transaction has a fund
+                    is_fund_valid = any(tx.fund_id is not None for tx in txs_qs)
+                    if not is_fund_valid and raise_exception:
+                        raise JournalEntryValidationError('At least one transaction must have a fund associated with it.')
             else:
                 is_fund_valid = True
 

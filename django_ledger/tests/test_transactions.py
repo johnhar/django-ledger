@@ -202,7 +202,9 @@ class TransactionModelFormSetTest(DjangoLedgerBaseTest):
 
         self.assertTrue(je_model.is_locked())
         txs_model = je_model.transactionmodel_set.all().first()
-        txs_model.amount += Decimal.from_float(1.00)
+        # sometimes the random JE doesn't have transactions
+        if txs_model:
+            txs_model.amount += Decimal.from_float(1.00)
 
         with self.assertRaises(TransactionModelValidationError):
             txs_model.save()

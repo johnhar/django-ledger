@@ -155,7 +155,6 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
                 timestamp=self.get_closing_date_as_timestamp(),
                 activity=activity if activity else None,
                 entity_unit_id=unit_model_id if unit_model_id else None,
-                fund_id=fund_model_id if fund_model_id else None,
                 origin='closing_entry',
                 description=f'Closing Entry {self.closing_date}',
                 is_closing_entry=True,
@@ -170,6 +169,7 @@ class ClosingEntryModelAbstract(CreateUpdateMixIn, MarkdownNotesMixIn):
                     journal_entry=ce_txs_journal_entries[(unit_model_id, fund_model_id, activity)],
                     tx_type=tx.tx_type,
                     account=tx.account_model,
+                    fund_id=fund_model_id if fund_model_id else None,
                     amount=tx.balance
                 ) for tx in je_txs
             ] for (unit_model_id, fund_model_id, activity), je_txs in ce_txs_gb.items()
