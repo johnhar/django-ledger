@@ -43,7 +43,7 @@ from treebeard.mp_tree import MP_Node, MP_NodeManager, MP_NodeQuerySet
 from django_ledger.io import roles as roles_module, validate_roles, IODigestContextManager
 from django_ledger.io.io_core import IOMixIn
 from django_ledger.io.utils import get_localtime, get_localdate
-from django_ledger.models.fund import FundModel
+from django_ledger.models.fund import FundModel, FundModelQuerySet
 from django_ledger.models.accounts import AccountModel, AccountModelQuerySet, DEBIT, CREDIT
 from django_ledger.models.bank_account import BankAccountModelQuerySet, BankAccountModel
 from django_ledger.models.chart_of_accounts import ChartOfAccountModel, ChartOfAccountModelQuerySet
@@ -1268,6 +1268,26 @@ class EntityModelAbstract(MP_Node,
                                 document_prefix=fund_model_kwargs.get('document_prefix',None),
                                 raise_exception=raise_exception,
                                 commit=commit)
+
+    def get_funds(self, active: bool = True) -> FundModelQuerySet:
+        """
+        Fetches all FundModels associated with the EntityModel instance.
+    
+        Parameters
+        ----------
+        active: bool
+            If True, returns only active Funds. Defaults to True.
+    
+        Returns
+        -------
+        FundModelQuerySet
+            Returns a FundModelQuerySet with applied filters.
+        """
+        # noinspection PyUnresolvedReferences
+        qs = self.fundmodel_set.all().select_related('entity')
+        if active:
+            qs = qs.filter(active=True)
+        return qs
 
     # Model Validators....
     def validate_chart_of_accounts_for_entity(self,
