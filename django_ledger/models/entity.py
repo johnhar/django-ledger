@@ -2876,19 +2876,21 @@ class EntityModelAbstract(MP_Node,
             'account': cash_account,
             'tx_type': DEBIT,
             'amount': amount,
-            'description': description
+            'description': description,
+            'fund': fund_model
         })
         txs.append({
             'account': capital_account,
             'tx_type': CREDIT,
             'amount': amount,
-            'description': description
+            'description': description,
+            'fund': fund_model
         })
 
         if not ledger_model:
             # noinspection PyUnresolvedReferences
             ledger_model = self.ledgermodel_set.create(
-                name=f'Capital Deposit on {je_timestamp.isoformat()}.',
+                name=description,
                 posted=ledger_posted
             )
         else:
@@ -2903,7 +2905,6 @@ class EntityModelAbstract(MP_Node,
             je_txs=txs,
             je_posted=je_posted,
             je_ledger_model=ledger_model,
-            fund_model=fund_model
         )
 
         return ledger_model
